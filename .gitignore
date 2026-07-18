@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.coverage
+
+# Claude Code Agent worktrees/sessions/agents cache
+.claude/worktrees/
+.claude/agents/
+.claude/sessions/

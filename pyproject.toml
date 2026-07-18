@@ -1,0 +1,13 @@
+[project]
+name = "kimi-code-acp"
+version = "0.1.0"
+description = "Kimi Code ACP coding tool plugin for Hermes Agent"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools]
+packages = ["kimi_code_acp"]

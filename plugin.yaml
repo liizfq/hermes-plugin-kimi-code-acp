@@ -1,0 +1,7 @@
+name: kimi-code-acp
+version: 0.1.0
+description: "Kimi Code ACP coding tool - runs Kimi Code CLI (kimi acp) as a delegated coding agent over the Agent Client Protocol."
+author: NousResearch
+kind: standalone
+provides_tools:
+  - kimi_code_acp
