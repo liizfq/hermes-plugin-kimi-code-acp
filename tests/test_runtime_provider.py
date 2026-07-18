@@ -5,7 +5,7 @@ Tests verify:
   2. The resolver returns the correct descriptor shape.
   3. Model priority (runtime path):
        requested_model (highest) > runtime_model override >
-       auxiliary.model > _DEFAULT_RUNTIME_MODEL ("kimi-k2").
+       kimi_code_acp.model > _DEFAULT_RUNTIME_MODEL ("kimi-k2").
   4. No workdir key in the descriptor.
 """
 
@@ -124,7 +124,7 @@ class TestResolverModel:
         assert _DEFAULT_RUNTIME_MODEL == "kimi-k2"
 
     def test_requested_model_overrides_everything(self):
-        """requested_model (priority 1) overrides all auxiliary fallbacks
+        """requested_model (priority 1) overrides all config-section fallbacks
         and the runtime default."""
         with patch("kimi_code_acp.config.merge_config") as mock_merge:
             mock_merge.return_value = dict(DEFAULTS)
@@ -134,7 +134,7 @@ class TestResolverModel:
     def test_runtime_model_overrides_runtime_default(self):
         """A runtime-specific operator override (``runtime_model``) wins
         over the runtime default (``kimi-k2``)."""
-        raw_aux = {"auxiliary": {AUXILIARY_KEY: {"runtime_model": "my-rt-model"}}}
+        raw_aux = {AUXILIARY_KEY: {"runtime_model": "my-rt-model"}}
         with patch("kimi_code_acp.config.merge_config") as mock_merge:
             mock_merge.return_value = dict(DEFAULTS)
             with patch("hermes_cli.config.load_config") as mock_lc:
@@ -142,17 +142,11 @@ class TestResolverModel:
                 result = resolve_runtime_provider(None, {})
         assert result["model"] == "my-rt-model"
 
-    def test_runtime_model_overrides_general_auxiliary_model(self):
+    def test_runtime_model_overrides_general_config_model(self):
         """A runtime-specific override (``runtime_model``) wins over the
-        general-purpose auxiliary ``model`` default."""
-        raw_aux = {
-            "auxiliary": {
-                AUXILIARY_KEY: {
-                    "runtime_model": "my-rt-model",
-                    "model": "general-model",
-                }
-            }
-        }
+        general-purpose ``model`` default."""
+        raw_aux = {AUXILIARY_KEY: {"runtime_model": "my-rt-model",
+                    "model": "general-model",}}
         with patch("kimi_code_acp.config.merge_config") as mock_merge:
             mock_merge.return_value = dict(DEFAULTS)
             with patch("hermes_cli.config.load_config") as mock_lc:
@@ -160,11 +154,11 @@ class TestResolverModel:
                 result = resolve_runtime_provider(None, {})
         assert result["model"] == "my-rt-model"
 
-    def test_auxiliary_model_overrides_runtime_default(self):
+    def test_config_model_overrides_runtime_default(self):
         """The general-purpose operator-configured
-        ``auxiliary.kimi_code_acp.model`` is consulted as a fallback
+        ``kimi_code_acp.model`` is consulted as a fallback
         BEFORE the runtime default (``kimi-k2``)."""
-        raw_aux = {"auxiliary": {AUXILIARY_KEY: {"model": "my-custom-model"}}}
+        raw_aux = {AUXILIARY_KEY: {"model": "my-custom-model"}}
         with patch("kimi_code_acp.config.merge_config") as mock_merge:
             mock_merge.return_value = dict(DEFAULTS)
             with patch("hermes_cli.config.load_config") as mock_lc:
@@ -172,15 +166,9 @@ class TestResolverModel:
                 result = resolve_runtime_provider(None, {})
         assert result["model"] == "my-custom-model"
 
-    def test_requested_model_overrides_runtime_and_auxiliary(self):
-        raw_aux = {
-            "auxiliary": {
-                AUXILIARY_KEY: {
-                    "runtime_model": "rt-model",
-                    "model": "general-model",
-                }
-            }
-        }
+    def test_requested_model_overrides_runtime_and_config(self):
+        raw_aux = {AUXILIARY_KEY: {"runtime_model": "rt-model",
+                    "model": "general-model",}}
         with patch("kimi_code_acp.config.merge_config") as mock_merge:
             mock_merge.return_value = dict(DEFAULTS)
             with patch("hermes_cli.config.load_config") as mock_lc:
@@ -189,18 +177,18 @@ class TestResolverModel:
         assert result["model"] == "explicit-requested"
 
     def test_no_model_uses_runtime_default(self):
-        """When the auxiliary block has no explicit model key, the runtime
+        """When the config block has no explicit model key, the runtime
         default (``kimi-k2``) applies."""
         with patch("kimi_code_acp.config.merge_config") as mock_merge:
             mock_merge.return_value = dict(DEFAULTS)
             with patch("hermes_cli.config.load_config") as mock_lc:
-                mock_lc.return_value = {"auxiliary": {AUXILIARY_KEY: {}}}
+                mock_lc.return_value = {AUXILIARY_KEY: {}}
                 result = resolve_runtime_provider(None, {})
         assert result["model"] == "kimi-k2"
 
 
 class TestResolverConfigReading:
-    def test_reads_from_auxiliary_config(self):
+    def test_reads_from_config_section(self):
         with patch("kimi_code_acp.config.merge_config") as mock_merge:
             mock_merge.return_value = dict(DEFAULTS)
             resolve_runtime_provider(None, {})

@@ -34,8 +34,6 @@ Install by symlinking or copying this directory into
 
 from __future__ import annotations
 
-from copy import deepcopy
-
 # The root __init__.py is loaded two different ways:
 #
 #   1. **Hermes directory loader** loads it as ``hermes_plugins.<slug>``
@@ -55,7 +53,6 @@ try:
         KIMI_CODE_ACP_SCHEMA,
         handle_kimi_code_acp,
     )
-    from .kimi_code_acp.config import AUXILIARY_KEY, DEFAULTS
     from .kimi_code_acp.delegation import (
         DELEGATION_PROVIDER_KEY,
         resolve_delegation_provider,
@@ -69,7 +66,6 @@ except ImportError:
         KIMI_CODE_ACP_SCHEMA,
         handle_kimi_code_acp,
     )
-    from kimi_code_acp.config import AUXILIARY_KEY, DEFAULTS
     from kimi_code_acp.delegation import (
         DELEGATION_PROVIDER_KEY,
         resolve_delegation_provider,
@@ -81,22 +77,24 @@ except ImportError:
 
 
 def register(ctx) -> None:
-    """Register the plugin with the Hermes PluginContext."""
-    # 1. Register auxiliary task — operator config slot.
-    ctx.register_auxiliary_task(
-        key=AUXILIARY_KEY,
-        display_name="Kimi Code ACP",
-        description=(
-            "Kimi Code CLI (kimi acp) ACP coding agent.  The launcher "
-            "(kimi acp) is fixed and not operator-configurable; operator "
-            "config covers timeout only.  The model and permission are "
-            "per-call parameters on the kimi_code_acp tool "
-            "(nullable-required; null = use the Kimi ACP server default)."
-        ),
-        defaults=deepcopy(DEFAULTS),
-    )
+    """Register the plugin with the Hermes PluginContext.
 
-    # 2. Register the coding tool — prompt + cwd + model + permission.
+    Note: this plugin deliberately does **not** call
+    ``ctx.register_auxiliary_task()``.  The Hermes auxiliary system is a
+    LLM side-task routing abstraction (vision, compression, web_extract,
+    approval, ...) and every auxiliary task is invoked through
+    ``auxiliary_client.call_llm()`` carrying the
+    ``provider/model/base_url/api_key`` routing quadruple.  This plugin
+    is a process transport (subprocess + JSON-RPC over stdio), not an
+    LLM call — the ACP server inside the subprocess owns the LLM
+    provider.  Registering it as an auxiliary task would pollute
+    ``config.yaml`` via the ``hermes model`` menu and trigger spurious
+    ``AUXILIARY_KIMI_CODE_ACP_*`` env-var bridging.  Operator config
+    lives under the top-level ``kimi_code_acp:`` section instead.
+    """
+    # 1. Register the coding tool — prompt + cwd + model + permission.
+    # This is the plugin's primary identity: a model-invoked tool whose
+    # handler spawns the ACP subprocess and runs one turn.
     ctx.register_tool(
         name="kimi_code_acp",
         toolset="kimi_code_acp",
@@ -108,18 +106,19 @@ def register(ctx) -> None:
             "per-call model and permission mode (nullable: null = use "
             "the Kimi ACP server default, a non-empty string requests "
             "a specific id).  All other execution parameters are "
-            "operator-configured via auxiliary.kimi_code_acp."
+            "operator-configured via the top-level kimi_code_acp "
+            "section in config.yaml."
         ),
         emoji="🚀",
     )
 
-    # 3. Register as a delegation provider.
+    # 2. Register as a delegation provider.
     ctx.register_delegation_provider(
         DELEGATION_PROVIDER_KEY,
         resolve_delegation_provider,
     )
 
-    # 4. Register as an ACP runtime provider.  Both ``kimi-agent-acp``
+    # 3. Register as an ACP runtime provider.  Both ``kimi-agent-acp``
     # (the command key) and ``kimi-code-acp`` (the plugin slug alias)
     # map to the same resolver.
     ctx.register_acp_runtime_provider(

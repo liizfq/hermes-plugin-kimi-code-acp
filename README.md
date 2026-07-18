@@ -89,26 +89,37 @@ requires an underlying launcher sandbox; do not infer it from `cwd`.
 
 ## Configuration
 
-Configure in `~/.hermes/config.yaml` under `auxiliary.kimi_code_acp`:
+Configure in `~/.hermes/config.yaml` under the **top-level** `kimi_code_acp`
+section:
 
 ```yaml
 plugins:
   enabled:
     - kimi-code-acp
 
-auxiliary:
-  kimi_code_acp:
-    timeout_seconds: 600
-    # Optional per-call fallbacks (null = Kimi ACP server default)
-    model: null
-    permission: null
+kimi_code_acp:
+  timeout_seconds: 600
+  # Optional per-call fallbacks (null = Kimi ACP server default)
+  model: null
+  permission: null
 ```
+
+> **Why top-level, not `auxiliary.*`?**  This plugin is a process transport
+> (spawns `kimi acp` and speaks JSON-RPC over stdio), not an LLM side-task.
+> The Hermes auxiliary system (`auxiliary.vision`, `auxiliary.compression`,
+> …) is an LLM routing abstraction where each task carries the
+> `provider/model/base_url/api_key` quadruple — that schema does not apply
+> to an ACP transport.  This plugin therefore reads from a top-level
+> `kimi_code_acp:` section (same pattern used by `image_gen`, `web`, `tts`)
+> and does not register as an auxiliary task, so it does not appear in the
+> `hermes model` → "Configure auxiliary models" picker.
 
 ### Validation Rules
 
 - Unknown keys are rejected. In particular, `acp_command`, `acp_args`,
-  `setting_sources`, `workdir`, `workspace`, `workspaces`, and `cwd` are
-  all **not** accepted in the auxiliary block.
+  `setting_sources`, `provider`, `base_url`, `api_key`, `workdir`,
+  `workspace`, `workspaces`, and `cwd` are all **not** accepted in this
+  block.
 - `timeout_seconds` must be between 1 and 3600 (this is an **inactivity
   timeout**, not a total task-duration limit).
 - `model` and `permission` must each be `null` or a non-empty string.

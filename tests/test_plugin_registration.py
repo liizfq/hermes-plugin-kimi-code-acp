@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kimi_code_acp.config import AUXILIARY_KEY, DEFAULTS
+from kimi_code_acp.config import CONFIG_SECTION, DEFAULTS
 from kimi_code_acp.tool import (
     FORBIDDEN_PARAMS,
     KIMI_CODE_ACP_SCHEMA,
@@ -133,15 +133,24 @@ def _load_plugin_module():
 
 
 class TestPluginRegistration:
-    def test_register_calls_register_auxiliary_task(self):
+    def test_register_does_not_call_register_auxiliary_task(self):
+        """Regression guard: the plugin is a tool + process transport,
+        NOT an LLM side-task, so it must never register as auxiliary.
+        See ``register()`` docstring for the architectural rationale."""
         mod = _load_plugin_module()
         ctx = MagicMock()
         mod.register(ctx)
-        ctx.register_auxiliary_task.assert_called_once()
-        call_kwargs = ctx.register_auxiliary_task.call_args
-        assert call_kwargs.kwargs["key"] == AUXILIARY_KEY
-        assert call_kwargs.kwargs["display_name"] == "Kimi Code ACP"
-        assert isinstance(call_kwargs.kwargs["defaults"], dict)
+        ctx.register_auxiliary_task.assert_not_called()
+
+    def test_register_surface_is_tool_delegation_and_two_runtimes(self):
+        """Lock in the contract: ``register(ctx)`` calls exactly these
+        four registration surfaces and nothing else."""
+        mod = _load_plugin_module()
+        ctx = MagicMock()
+        mod.register(ctx)
+        ctx.register_tool.assert_called_once()
+        ctx.register_delegation_provider.assert_called_once()
+        assert ctx.register_acp_runtime_provider.call_count == 2
 
     def test_register_calls_register_tool(self):
         mod = _load_plugin_module()
@@ -167,25 +176,6 @@ class TestPluginRegistration:
         mod.register(ctx)
         assert ctx.register_acp_runtime_provider.call_count == 2
 
-    def test_auxiliary_defaults_match_expected(self):
-        """Defaults registered must match DEFAULTS from config module --
-        exactly 3 keys, no launcher keys, no setting_sources."""
-        mod = _load_plugin_module()
-        ctx = MagicMock()
-        mod.register(ctx)
-
-        call_kwargs = ctx.register_auxiliary_task.call_args
-        defaults = call_kwargs.kwargs["defaults"]
-        assert set(defaults.keys()) == {"timeout_seconds", "model", "permission"}
-        assert "acp_command" not in defaults
-        assert "acp_args" not in defaults
-        assert "setting_sources" not in defaults
-        assert "workdir" not in defaults
-        assert "workspace" not in defaults
-        assert "workspaces" not in defaults
-        assert defaults["model"] is None
-        assert defaults["permission"] is None
-
     def test_runtime_provider_keys(self):
         """The two runtime provider registrations cover both
         ``kimi-agent-acp`` and ``kimi-code-acp``."""
@@ -210,7 +200,7 @@ class TestHandlerReturnType:
     def test_handler_returns_string(self, tmp_path):
         cfg = dict(DEFAULTS)
         with patch("hermes_cli.config.load_config") as mock_load:
-            mock_load.return_value = {"auxiliary": {AUXILIARY_KEY: cfg}}
+            mock_load.return_value = {CONFIG_SECTION: cfg}
             result = handle_kimi_code_acp({
                 "prompt": "do something",
                 "cwd": str(tmp_path),
@@ -336,26 +326,22 @@ class TestBackendDelegation:
 
 
 # --------------------------------------------------------------------------- #
-# register() defaults isolation — DEFAULTS must not be mutated
+# register() surface isolation — no aux-task, exactly four surfaces
 # --------------------------------------------------------------------------- #
 
-class TestRegisterDefaultsIsolation:
-    def test_register_does_not_pass_module_defaults(self):
+class TestRegisterSurfaceIsolation:
+    def test_register_does_not_touch_other_surfaces(self):
+        """``register(ctx)`` must ONLY touch the four documented surfaces.
+        This guards against an accidental re-add of auxiliary-task
+        registration or some other plugin hook."""
         mod = _load_plugin_module()
         ctx = MagicMock()
         mod.register(ctx)
-
-        passed_defaults = ctx.register_auxiliary_task.call_args.kwargs["defaults"]
-        assert passed_defaults is not DEFAULTS, (
-            "register() passed the module-level DEFAULTS dict directly."
+        # Tool + delegation + 2× runtime = exactly 4 register_* calls.
+        total = (
+            ctx.register_tool.call_count
+            + ctx.register_delegation_provider.call_count
+            + ctx.register_acp_runtime_provider.call_count
         )
-
-    def test_registered_defaults_dict_is_independent(self):
-        """Mutating the registered defaults must not affect DEFAULTS."""
-        mod = _load_plugin_module()
-        ctx = MagicMock()
-        mod.register(ctx)
-
-        passed_defaults = ctx.register_auxiliary_task.call_args.kwargs["defaults"]
-        passed_defaults["model"] = "INJECTED"
-        assert DEFAULTS["model"] is None
+        assert total == 4
+        assert ctx.register_auxiliary_task.call_count == 0

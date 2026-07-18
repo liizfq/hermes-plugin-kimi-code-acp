@@ -42,7 +42,7 @@ import pytest
 
 from kimi_code_acp.backend import run_task, close_session
 from kimi_code_acp.session_meta import build_session_meta, session_meta_is_safe
-from kimi_code_acp.config import AUXILIARY_KEY, DEFAULTS
+from kimi_code_acp.config import CONFIG_SECTION, DEFAULTS
 from kimi_code_acp.tool import handle_kimi_code_acp
 
 
@@ -273,7 +273,7 @@ class TestConfigFallbackResolution:
         cfg["model"] = "kimi-k2"
         with patch("hermes_cli.config.load_config") as mock_load, \
              self._patch_backend(mock_turn_result):
-            mock_load.return_value = {"auxiliary": {AUXILIARY_KEY: cfg}}
+            mock_load.return_value = {CONFIG_SECTION: cfg}
             FakeSession._run_turn_result = mock_turn_result
             result = handle_kimi_code_acp({
                 "prompt": "do something",
@@ -291,7 +291,7 @@ class TestConfigFallbackResolution:
         cfg["model"] = "kimi-k2"
         with patch("hermes_cli.config.load_config") as mock_load, \
              self._patch_backend(mock_turn_result):
-            mock_load.return_value = {"auxiliary": {AUXILIARY_KEY: cfg}}
+            mock_load.return_value = {CONFIG_SECTION: cfg}
             FakeSession._run_turn_result = mock_turn_result
             result = handle_kimi_code_acp({
                 "prompt": "do something",
@@ -309,7 +309,7 @@ class TestConfigFallbackResolution:
         cfg["permission"] = "auto"
         with patch("hermes_cli.config.load_config") as mock_load, \
              self._patch_backend(mock_turn_result):
-            mock_load.return_value = {"auxiliary": {AUXILIARY_KEY: cfg}}
+            mock_load.return_value = {CONFIG_SECTION: cfg}
             FakeSession._run_turn_result = mock_turn_result
             result = handle_kimi_code_acp({
                 "prompt": "do something",
@@ -326,7 +326,7 @@ class TestConfigFallbackResolution:
         cfg = dict(DEFAULTS)
         with patch("hermes_cli.config.load_config") as mock_load, \
              self._patch_backend(mock_turn_result):
-            mock_load.return_value = {"auxiliary": {AUXILIARY_KEY: cfg}}
+            mock_load.return_value = {CONFIG_SECTION: cfg}
             FakeSession._run_turn_result = mock_turn_result
             result = handle_kimi_code_acp({
                 "prompt": "do something",

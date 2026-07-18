@@ -1,32 +1,47 @@
 """Configuration helpers for the kimi-code-acp plugin.
 
 This module provides:
-  - ``AUXILIARY_KEY``: the stable auxiliary-task key registered with Hermes.
+  - ``CONFIG_SECTION``: the top-level config.yaml section this plugin
+    reads (``kimi_code_acp``).  Deliberately NOT under ``auxiliary.*``
+    — this plugin is a tool, not an LLM routing task (see "Config
+    location" below).
   - ``ACP_COMMAND`` / ``ACP_ARGS``: the **fixed, non-configurable** ACP
     launcher.  The plugin always spawns ``kimi acp`` (the ACP mode of
     the ``@moonshot-ai/kimi-code`` CLI).  A different launcher is a
     source-level change, NOT an operator config override.
-  - ``DEFAULTS``: safe default values for operator auxiliary config
+  - ``DEFAULTS``: safe default values for operator config
     (``timeout_seconds``, ``model``, ``permission``).  ``model`` and
     ``permission`` are optional operator-supplied defaults that the
     per-call tool parameters fall back to when the caller passes
     ``null``; both default to ``None`` (meaning "use the Kimi ACP
     server's own default").
   - ``merge_config``: merge defaults <- user config, using
-    ``hermes_cli.config.load_config`` to read the ``auxiliary.<key>``
-    block from config.yaml.
+    ``hermes_cli.config.load_config`` to read the top-level
+    ``kimi_code_acp`` block from config.yaml.
   - ``validate_config``: strict validation of all operator-supplied fields.
   - ``ConfigError``: raised on validation failure.
 
-Design notes
-------------
-* The auxiliary config slot is ``auxiliary.kimi_code_acp`` in config.yaml.
-* Unlike the Claude Code ACP plugin, there is **no** ``setting_sources``
-  config key.  Kimi Code CLI carries its own authentication state under
-  ``~/.kimi-code/`` (populated by ``kimi`` login); it does not consult
-  ``~/.claude/settings.json``.  Operator config covers only the
-  inactivity ``timeout_seconds`` and the optional ``model`` /
-  ``permission`` fallbacks.
+Config location
+---------------
+* This plugin reads its operator config from the **top-level**
+  ``kimi_code_acp:`` section in config.yaml — the same pattern used by
+  ``image_gen``, ``web``, ``tts`` and other plugin-provided tools that
+  carry their own provider/model selection.
+* It deliberately does **not** register as an auxiliary task
+  (``ctx.register_auxiliary_task``) because the Hermes auxiliary system
+  is a **LLM side-task routing** abstraction (vision, compression,
+  web_extract, approval, …): every auxiliary task is invoked through
+  ``auxiliary_client.call_llm()`` and carries the
+  ``provider/model/base_url/api_key`` routing quadruple.  This plugin
+  is a process transport (subprocess + JSON-RPC over stdio), not an
+  LLM call — it spawns ``kimi acp`` and the ACP server inside that
+  process owns the LLM provider.  Registering it as an auxiliary task
+  would (a) pollute ``config.yaml`` with the LLM routing quadruple
+  via the ``hermes model`` menu, (b) trigger spurious
+  ``AUXILIARY_KIMI_CODE_ACP_*`` env-var bridging at gateway startup,
+  and (c) misclassify a tool as a side-task LLM call.
+* The plugin's model is chosen **per tool call** (the ``model``
+  parameter on the ``kimi_code_acp`` tool), not by auxiliary routing.
 * The ACP launcher (``acp_command`` / ``acp_args``) is **fixed**.  Any
   operator-supplied ``acp_command`` or ``acp_args`` key is rejected as
   an unknown key.
@@ -58,6 +73,11 @@ from typing import Any, Dict, Optional
 # --------------------------------------------------------------------------- #
 
 AUXILIARY_KEY = "kimi_code_acp"
+#: Alias for the config section name.  Historically called AUXILIARY_KEY
+#: because the plugin used to register under ``auxiliary.*``; the name is
+#: kept for import compatibility but the plugin now reads from the
+#: top-level ``kimi_code_acp:`` section instead.  See module docstring.
+CONFIG_SECTION = AUXILIARY_KEY
 
 #: Fixed ACP launcher -- the only launcher this plugin supports.
 #:
@@ -166,16 +186,17 @@ def merge_config(user_overrides: Optional[Dict[str, Any]] = None) -> Dict[str, A
         from hermes_cli.config import load_config
         config = load_config()
     except Exception:
+        # Config unavailable (e.g. test env without HERMES_HOME).
+        # Fall back to defaults only.
         return merged
 
     if not isinstance(config, dict):
         return merged
 
-    aux_section = config.get("auxiliary", {})
-    if not isinstance(aux_section, dict):
-        return merged
-
-    user_cfg = aux_section.get(AUXILIARY_KEY, {})
+    # Read the top-level ``kimi_code_acp:`` section.  This plugin is a
+    # tool, not an LLM routing task, so it deliberately does NOT read
+    # from ``auxiliary.kimi_code_acp`` (see module docstring).
+    user_cfg = config.get(CONFIG_SECTION, {})
     if isinstance(user_cfg, dict):
         for k, v in user_cfg.items():
             merged[k] = v
@@ -197,8 +218,9 @@ def validate_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
     * Only keys declared in :data:`DEFAULTS` (``timeout_seconds``,
       ``model``, ``permission``) are accepted.  All other keys --
       including ``acp_command``, ``acp_args``, ``setting_sources``,
-      ``workdir``, ``workspace``, ``workspaces``, ``cwd`` -- are
-      rejected as unknown.
+      ``workdir``, ``workspace``, ``workspaces``, ``cwd``,
+      ``provider``, ``base_url``, ``api_key`` -- are rejected as
+      unknown.
     * ``timeout_seconds``: number in [1, 3600].  This is an **inactivity
       timeout**, not a total task-duration limit.
     * ``model`` and ``permission``: each must be ``None`` or a non-empty
@@ -219,7 +241,7 @@ def validate_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
     if unknown:
         raise ConfigError(
             "Configuration contains unsupported keys. "
-            "Only the documented auxiliary.kimi_code_acp keys are accepted."
+            "Only the documented kimi_code_acp keys are accepted."
         )
 
     # -- timeout_seconds -- #

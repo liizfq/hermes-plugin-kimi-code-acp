@@ -7,7 +7,7 @@ produce a descriptor dict that the switch writes into config.
 This path is the **main agent's ACP runtime** provider path -- it is NOT
 the per-call ``kimi_code_acp`` tool schema.  The per-call tool schema has
 its own ``model`` parameter (nullable-required, ``None`` falls back to
-the operator-configured ``auxiliary.kimi_code_acp.model`` default and
+the operator-configured ``kimi_code_acp.model`` default and
 finally to the Kimi ACP server default).
 
 The launcher (``command`` / ``args``) is **not** operator-configurable.
@@ -18,18 +18,19 @@ Model resolution priority (runtime path — main agent's ACP session):
 
   1. ``requested_model`` (from command/config — highest priority)
   2. operator-configured runtime-specific override
-     (``auxiliary.kimi_code_acp.runtime_model``)
+     (``kimi_code_acp.runtime_model``)
   3. operator-configured general-purpose default
-     (``auxiliary.kimi_code_acp.model``)
+    (``kimi_code_acp.model``) — the same key the per-call
+    ``kimi_code_acp`` tool argument falls back to.
   4. runtime default (:data:`_DEFAULT_RUNTIME_MODEL`)
-"""
+  """
 
 from __future__ import annotations
 
 import logging
 from typing import Any, Dict, Optional
 
-from .config import ACP_ARGS, ACP_COMMAND, AUXILIARY_KEY, DEFAULTS
+from .config import ACP_ARGS, ACP_COMMAND, CONFIG_SECTION, DEFAULTS
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ def resolve_runtime_provider(
         Model override from the command/config, or ``None``.
     cfg
         The full config dict from config.yaml (unused directly — ACP
-        settings are read via ``merge_config()`` from the auxiliary block).
+        settings are read via ``merge_config()`` from the top-level kimi_code_acp block).
 
     Returns
     -------
@@ -71,10 +72,15 @@ def resolve_runtime_provider(
         try:
             from hermes_cli.config import load_config as _lc
             _raw = _lc()
-            _aux = (_raw.get("auxiliary") or {}).get(AUXILIARY_KEY) or {}
+            # Read the top-level ``kimi_code_acp:`` section.  This plugin
+            # is a tool, not an LLM routing task, so it does NOT read
+            # from ``auxiliary.*`` (see kimi_code_acp/config.py docstring).
+            _aux = (_raw.get(CONFIG_SECTION) or {})
             if isinstance(_aux, dict) and _aux.get("runtime_model"):
                 effective_model = _aux["runtime_model"]
             elif isinstance(_aux, dict) and _aux.get("model"):
+                # Fall back to the general-purpose operator-configured
+                # default before the fixed module-level default kicks in.
                 effective_model = _aux["model"]
         except Exception:
             pass

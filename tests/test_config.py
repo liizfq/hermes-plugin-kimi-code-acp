@@ -20,7 +20,7 @@ import pytest
 from kimi_code_acp.config import (
     ACP_ARGS,
     ACP_COMMAND,
-    AUXILIARY_KEY,
+    CONFIG_SECTION,
     DEFAULTS,
     DEPRECATED_PATH_KEYS,
     ConfigError,
@@ -112,13 +112,12 @@ class TestMerge:
             assert merged[key] == DEFAULTS[key]
 
     def test_merge_none_overrides_with_user_config_wins(self):
-        """When user_overrides is None and a real config.yaml has an
-        auxiliary override, the operator's value wins over DEFAULTS."""
-        from kimi_code_acp.config import AUXILIARY_KEY
+        """When user_overrides is None and a real config.yaml has a
+        top-level ``kimi_code_acp`` section, the operator's value wins
+        over DEFAULTS."""
+        from kimi_code_acp.config import CONFIG_SECTION
         fake_config = {
-            "auxiliary": {
-                AUXILIARY_KEY: {"model": "kimi-k2", "timeout_seconds": 300}
-            }
+            CONFIG_SECTION: {"model": "kimi-k2", "timeout_seconds": 300}
         }
         with patch("hermes_cli.config.load_config") as mock_load:
             mock_load.return_value = fake_config
@@ -466,7 +465,7 @@ class TestNoSecretLeakInErrors:
         cfg["acp_args"] = ["acp", self.SECRET_SENTINEL]
         cfg["timeout_seconds"] = 99999
         with patch("hermes_cli.config.load_config") as mock_load:
-            mock_load.return_value = {"auxiliary": {AUXILIARY_KEY: cfg}}
+            mock_load.return_value = {CONFIG_SECTION: cfg}
             result = handle_kimi_code_acp(
                 {"prompt": "do something", "cwd": str(tmp_path)}
             )
@@ -481,7 +480,7 @@ class TestNoSecretLeakInErrors:
         cfg = dict(DEFAULTS)
         cfg["workdir"] = f"/nonexistent/{self.SECRET_SENTINEL}/path"
         with patch("hermes_cli.config.load_config") as mock_load:
-            mock_load.return_value = {"auxiliary": {AUXILIARY_KEY: cfg}}
+            mock_load.return_value = {CONFIG_SECTION: cfg}
             result = handle_kimi_code_acp(
                 {"prompt": "do something", "cwd": str(tmp_path)}
             )

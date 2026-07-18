@@ -2,7 +2,7 @@
 
 When ``delegation.provider`` is set to ``kimi-code-acp`` in config.yaml,
 the generic delegation provider registry calls the resolver registered
-here.  It reads the operator-configured ``auxiliary.kimi_code_acp``
+here.  It reads the operator-configured ``kimi_code_acp``
 block (timeout, model, permission) and produces a generic descriptor
 dict that routes the child agent through the ACP transport.
 
@@ -11,7 +11,7 @@ Model resolution policy
   1. ``delegation.model`` (operator-configured in ``config.yaml``) wins
      if set.
   2. Otherwise, the optional operator-configured
-     ``auxiliary.kimi_code_acp.model`` default is consulted.
+     ``kimi_code_acp.model`` default is consulted.
   3. Otherwise, fall back to a fixed module-level default
      :data:`_DEFAULT_DELEGATION_MODEL`.
 
@@ -41,7 +41,7 @@ DELEGATION_PROVIDER_KEY = "kimi-code-acp"
 
 #: Fixed fallback model for the delegation (subagent) provider path.
 #: Operators who want a different model should set ``delegation.model``
-#: (highest priority) or ``auxiliary.kimi_code_acp.model`` (second
+#: (highest priority) or ``kimi_code_acp.model`` (second
 #: priority).  This is the last-resort fallback so the descriptor always
 #: carries a non-empty model id.
 _DEFAULT_DELEGATION_MODEL = "kimi-k2"
@@ -60,7 +60,7 @@ def resolve_delegation_provider(
         wins over every other source.
     cfg
         The full ``delegation`` config block (unused directly — ACP
-        settings live under ``auxiliary.kimi_code_acp``).
+        settings live under ``kimi_code_acp``).
 
     Returns
     -------
