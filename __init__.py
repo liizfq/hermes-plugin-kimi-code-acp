@@ -15,7 +15,7 @@ closes the old session under the manager lock and creates a new one.
 ``model`` and ``permission`` are live-switched via
 ``session/set_config_option`` and do NOT trigger a rebuild.
 
-The operator provides timeout via ``auxiliary.kimi_code_acp``.  The ACP
+The operator provides timeout via ``kimi_code_acp``.  The ACP
 launcher (``kimi acp``) is **fixed** at the code level — see
 :data:`kimi_code_acp.config.ACP_COMMAND` / :data:`ACP_ARGS`; it is not
 operator-configurable.
@@ -49,10 +49,6 @@ from __future__ import annotations
 # We try the relative import first (correct under Hermes), then fall back
 # to the absolute import (correct under pytest).
 try:
-    from .kimi_code_acp.tool import (
-        KIMI_CODE_ACP_SCHEMA,
-        handle_kimi_code_acp,
-    )
     from .kimi_code_acp.delegation import (
         DELEGATION_PROVIDER_KEY,
         resolve_delegation_provider,
@@ -61,11 +57,11 @@ try:
         RUNTIME_PROVIDER_KEY,
         resolve_runtime_provider,
     )
-except ImportError:
-    from kimi_code_acp.tool import (
+    from .kimi_code_acp.tool import (
         KIMI_CODE_ACP_SCHEMA,
         handle_kimi_code_acp,
     )
+except ImportError:
     from kimi_code_acp.delegation import (
         DELEGATION_PROVIDER_KEY,
         resolve_delegation_provider,
@@ -73,6 +69,10 @@ except ImportError:
     from kimi_code_acp.runtime import (
         RUNTIME_PROVIDER_KEY,
         resolve_runtime_provider,
+    )
+    from kimi_code_acp.tool import (
+        KIMI_CODE_ACP_SCHEMA,
+        handle_kimi_code_acp,
     )
 
 
@@ -126,6 +126,6 @@ def register(ctx) -> None:
         resolve_runtime_provider,
     )
     ctx.register_acp_runtime_provider(
-        DELEGATION_PROVIDER_KEY,    # alias
+        DELEGATION_PROVIDER_KEY,  # alias
         resolve_runtime_provider,
     )

@@ -30,9 +30,9 @@ Other behaviours
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
-from .config import ACP_ARGS, ACP_COMMAND, AUXILIARY_KEY, DEFAULTS, merge_config
+from .config import ACP_ARGS, ACP_COMMAND, merge_config
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +49,8 @@ _DEFAULT_DELEGATION_MODEL = "kimi-k2"
 
 def resolve_delegation_provider(
     requested_model: Optional[str],
-    cfg: Dict[str, Any],
-) -> Dict[str, Any]:
+    cfg: dict[str, Any],
+) -> dict[str, Any]:
     """Produce a descriptor dict for the kimi-code-acp delegation provider.
 
     Parameters
@@ -70,11 +70,7 @@ def resolve_delegation_provider(
     """
     acp_cfg = merge_config()
 
-    effective_model = (
-        requested_model
-        or acp_cfg.get("model")
-        or _DEFAULT_DELEGATION_MODEL
-    )
+    effective_model = requested_model or acp_cfg.get("model") or _DEFAULT_DELEGATION_MODEL
 
     return {
         "provider": "acp_client",

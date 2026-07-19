@@ -10,7 +10,7 @@ session via ``session/set_config_option`` (the Kimi ACP adapter's
 unified dispatcher).  At any instant there is at most one live
 subprocess.
 
-The operator provides timeout via ``auxiliary.kimi_code_acp``.  The ACP
+The operator provides timeout via ``kimi_code_acp``.  The ACP
 launcher (``kimi acp``) is **fixed** (see
 :data:`kimi_code_acp.config.ACP_COMMAND` / :data:`ACP_ARGS`) and is not
 operator-configurable.  The working directory is supplied **per call**
@@ -26,9 +26,9 @@ come from the Hermes core
 from .config import (
     AUXILIARY_KEY,
     DEFAULTS,
+    ConfigError,
     merge_config,
     validate_config,
-    ConfigError,
 )
 from .session_meta import build_session_meta, session_meta_is_safe
 from .tool import KIMI_CODE_ACP_SCHEMA, handle_kimi_code_acp, run_task

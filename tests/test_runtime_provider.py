@@ -15,19 +15,17 @@ import importlib.util
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from kimi_code_acp.config import ACP_ARGS, ACP_COMMAND, AUXILIARY_KEY, DEFAULTS
 from kimi_code_acp.runtime import (
-    RUNTIME_PROVIDER_KEY,
     _DEFAULT_RUNTIME_MODEL,
+    RUNTIME_PROVIDER_KEY,
     resolve_runtime_provider,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Constants
 # --------------------------------------------------------------------------- #
+
 
 class TestRuntimeProviderKey:
     def test_key_is_kimi_agent_acp(self):
@@ -39,14 +37,23 @@ class TestRuntimeProviderKey:
 # Resolver behaviour
 # --------------------------------------------------------------------------- #
 
+
 class TestResolverShape:
     def test_returns_dict_with_required_keys(self):
         with patch("kimi_code_acp.config.merge_config") as mock_merge:
             mock_merge.return_value = dict(DEFAULTS)
             result = resolve_runtime_provider(None, {})
         assert isinstance(result, dict)
-        for key in ("provider", "api_mode", "display_provider", "model",
-                     "command", "args", "base_url", "api_key"):
+        for key in (
+            "provider",
+            "api_mode",
+            "display_provider",
+            "model",
+            "command",
+            "args",
+            "base_url",
+            "api_key",
+        ):
             assert key in result
 
     def test_provider_is_acp_client(self):
@@ -145,8 +152,12 @@ class TestResolverModel:
     def test_runtime_model_overrides_general_config_model(self):
         """A runtime-specific override (``runtime_model``) wins over the
         general-purpose ``model`` default."""
-        raw_aux = {AUXILIARY_KEY: {"runtime_model": "my-rt-model",
-                    "model": "general-model",}}
+        raw_aux = {
+            AUXILIARY_KEY: {
+                "runtime_model": "my-rt-model",
+                "model": "general-model",
+            }
+        }
         with patch("kimi_code_acp.config.merge_config") as mock_merge:
             mock_merge.return_value = dict(DEFAULTS)
             with patch("hermes_cli.config.load_config") as mock_lc:
@@ -167,8 +178,12 @@ class TestResolverModel:
         assert result["model"] == "my-custom-model"
 
     def test_requested_model_overrides_runtime_and_config(self):
-        raw_aux = {AUXILIARY_KEY: {"runtime_model": "rt-model",
-                    "model": "general-model",}}
+        raw_aux = {
+            AUXILIARY_KEY: {
+                "runtime_model": "rt-model",
+                "model": "general-model",
+            }
+        }
         with patch("kimi_code_acp.config.merge_config") as mock_merge:
             mock_merge.return_value = dict(DEFAULTS)
             with patch("hermes_cli.config.load_config") as mock_lc:
@@ -208,6 +223,7 @@ class TestResolverConfigReading:
 # Plugin registration
 # --------------------------------------------------------------------------- #
 
+
 def _load_plugin_module():
     plugin_dir = Path(__file__).resolve().parent.parent
     init_file = plugin_dir / "__init__.py"
@@ -232,20 +248,14 @@ class TestPluginRegistersRuntimeProvider:
         mod = _load_plugin_module()
         ctx = MagicMock()
         mod.register(ctx)
-        keys = [
-            call.args[0]
-            for call in ctx.register_acp_runtime_provider.call_args_list
-        ]
+        keys = [call.args[0] for call in ctx.register_acp_runtime_provider.call_args_list]
         assert RUNTIME_PROVIDER_KEY in keys
 
     def test_registered_alias_kimi_code_acp(self):
         mod = _load_plugin_module()
         ctx = MagicMock()
         mod.register(ctx)
-        keys = [
-            call.args[0]
-            for call in ctx.register_acp_runtime_provider.call_args_list
-        ]
+        keys = [call.args[0] for call in ctx.register_acp_runtime_provider.call_args_list]
         assert "kimi-code-acp" in keys
 
     def test_registered_resolver_is_callable(self):

@@ -8,13 +8,13 @@ The tool schema exposes exactly **four** parameters, all required:
   call time).
 * ``model``  — the model id for this call (model-controlled, **nullable**).
   ``null`` / Python ``None`` means "fall back to the operator-configured
-  ``auxiliary.kimi_code_acp.model`` default, and finally to the Kimi ACP
+  ``kimi_code_acp.model`` default, and finally to the Kimi ACP
   server's default model"; a non-empty string requests a specific model
   id accepted by the Kimi ACP server (e.g. ``"kimi-k2"``, ``"auto"``).
   Required in the JSON schema; default value is ``null``.
 * ``permission`` — the session mode for this call (model-controlled,
   **nullable**).  ``null`` / Python ``None`` means "fall back to the
-  operator-configured ``auxiliary.kimi_code_acp.permission`` default,
+  operator-configured ``kimi_code_acp.permission`` default,
   and finally to the Kimi ACP server's default mode"; a non-empty
   string requests a specific mode accepted by the Kimi ACP server's
   ``session/set_config_option`` dispatcher: ``"default"``, ``"plan"``,
@@ -32,7 +32,7 @@ left the config key unset.
 
 No command, args, effort, timeout fields are exposed to the model —
 those are either operator-configured via the
-``auxiliary.kimi_code_acp`` config block (timeout and the optional
+``kimi_code_acp`` config block (timeout and the optional
 model / permission fallbacks) or **fixed at the code level** (the ACP
 launcher — see :data:`kimi_code_acp.config.ACP_COMMAND` / :data:`ACP_ARGS`).
 
@@ -60,13 +60,13 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 # --------------------------------------------------------------------------- #
 # Tool schema — prompt + cwd + model + permission (model/permission nullable)
 # --------------------------------------------------------------------------- #
 
-KIMI_CODE_ACP_SCHEMA: Dict[str, Any] = {
+KIMI_CODE_ACP_SCHEMA: dict[str, Any] = {
     "name": "kimi_code_acp",
     "description": (
         "Run a Kimi Code ACP coding task with the given prompt in the "
@@ -80,10 +80,7 @@ KIMI_CODE_ACP_SCHEMA: Dict[str, Any] = {
         "properties": {
             "prompt": {
                 "type": "string",
-                "description": (
-                    "The coding task prompt to send to the Kimi Code "
-                    "ACP agent."
-                ),
+                "description": ("The coding task prompt to send to the Kimi Code ACP agent."),
             },
             "cwd": {
                 "type": "string",
@@ -98,11 +95,11 @@ KIMI_CODE_ACP_SCHEMA: Dict[str, Any] = {
                 "description": (
                     "Model id to use for this call. Pass null (None) to "
                     "fall back to the operator-configured "
-                    "auxiliary.kimi_code_acp.model default, and finally "
+                    "kimi_code_acp.model default, and finally "
                     "to the Kimi ACP server's default model; pass a "
                     "non-empty string to request a specific model id "
-                    "accepted by the Kimi ACP server (e.g. \"kimi-k2\", "
-                    "\"auto\"). The plugin does NOT translate or alias "
+                    'accepted by the Kimi ACP server (e.g. "kimi-k2", '
+                    '"auto"). The plugin does NOT translate or alias '
                     "the value -- whatever the caller passes is "
                     "forwarded verbatim to the ACP session constructor."
                 ),
@@ -115,11 +112,11 @@ KIMI_CODE_ACP_SCHEMA: Dict[str, Any] = {
                     "Kimi ACP server's session/set_config_option mode "
                     "axis). Pass null (None) to fall back to the "
                     "operator-configured "
-                    "auxiliary.kimi_code_acp.permission default, and "
+                    "kimi_code_acp.permission default, and "
                     "finally to the Kimi ACP server's default mode; "
                     "pass one of the accepted non-empty string values "
-                    "to request a specific mode: \"default\", \"plan\", "
-                    "\"auto\", etc. The plugin does NOT translate or "
+                    'to request a specific mode: "default", "plan", '
+                    '"auto", etc. The plugin does NOT translate or '
                     "alias the value -- whatever the caller passes is "
                     "forwarded verbatim to the ACP session. "
                     "Live-switched on the existing session via "
@@ -137,15 +134,24 @@ KIMI_CODE_ACP_SCHEMA: Dict[str, Any] = {
 REQUIRED_PARAMS = ("prompt", "cwd", "model", "permission")
 
 #: Parameters that must NEVER appear in the schema (security boundary).
-FORBIDDEN_PARAMS = frozenset({
-    "command", "args", "effort", "workdir", "workspace",
-    "workspaces", "timeout", "setting_sources",
-})
+FORBIDDEN_PARAMS = frozenset(
+    {
+        "command",
+        "args",
+        "effort",
+        "workdir",
+        "workspace",
+        "workspaces",
+        "timeout",
+        "setting_sources",
+    }
+)
 
 
 # --------------------------------------------------------------------------- #
 # cwd + model validation
 # --------------------------------------------------------------------------- #
+
 
 def validate_cwd(cwd: Any) -> str:
     """Validate the call-time ``cwd`` argument.
@@ -230,9 +236,10 @@ def validate_permission(permission: Any) -> Optional[str]:
 # Execution seam — delegates to backend
 # --------------------------------------------------------------------------- #
 
+
 def run_task(
     prompt: str,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     *,
     cwd: str,
     model: Optional[str] = None,
@@ -245,8 +252,13 @@ def run_task(
     with the result, tool iteration count, and should_retire flag.
     """
     from .backend import run_task as _run_task
+
     return _run_task(
-        prompt, config, cwd=cwd, model=model, permission=permission,
+        prompt,
+        config,
+        cwd=cwd,
+        model=model,
+        permission=permission,
     )
 
 
@@ -254,7 +266,8 @@ def run_task(
 # Tool handler — called by the Hermes tools registry
 # --------------------------------------------------------------------------- #
 
-def handle_kimi_code_acp(args: Dict[str, Any], **_kw: Any) -> str:
+
+def handle_kimi_code_acp(args: dict[str, Any], **_kw: Any) -> str:
     """Handle a ``kimi_code_acp`` tool call.
 
     Extracts ``prompt``, ``cwd``, ``model``, and ``permission`` from
@@ -265,7 +278,7 @@ def handle_kimi_code_acp(args: Dict[str, Any], **_kw: Any) -> str:
     The handler always returns a **string** (per Hermes tool contract).
     Validation errors are returned as JSON error strings, not raised.
     """
-    from .config import merge_config, validate_config, ConfigError
+    from .config import ConfigError, merge_config, validate_config
 
     if not isinstance(args, dict):
         return json.dumps({"error": "args must be an object"})
@@ -277,46 +290,54 @@ def handle_kimi_code_acp(args: Dict[str, Any], **_kw: Any) -> str:
     try:
         resolved_cwd = validate_cwd(args.get("cwd"))
     except ValueError:
-        return json.dumps({
-            "error": "cwd is invalid: must be an absolute path to an existing directory",
-            "error_type": "ValueError",
-        })
+        return json.dumps(
+            {
+                "error": "cwd is invalid: must be an absolute path to an existing directory",
+                "error_type": "ValueError",
+            }
+        )
 
     try:
         cfg = merge_config()
         validate_config(cfg)
     except ConfigError:
-        return json.dumps({
-            "error": "ACP configuration validation failed",
-            "error_type": "ConfigError",
-        })
+        return json.dumps(
+            {
+                "error": "ACP configuration validation failed",
+                "error_type": "ConfigError",
+            }
+        )
 
     try:
         per_call_model = validate_model(args.get("model"))
     except ValueError:
-        return json.dumps({
-            "error": "model is invalid: must be null or a non-empty string",
-            "error_type": "ValueError",
-        })
+        return json.dumps(
+            {
+                "error": "model is invalid: must be null or a non-empty string",
+                "error_type": "ValueError",
+            }
+        )
 
     try:
         per_call_permission = validate_permission(args.get("permission"))
     except ValueError:
-        return json.dumps({
-            "error": "permission is invalid: must be null or a non-empty string",
-            "error_type": "ValueError",
-        })
+        return json.dumps(
+            {
+                "error": "permission is invalid: must be null or a non-empty string",
+                "error_type": "ValueError",
+            }
+        )
 
     # Resolve model and permission with priority:
     #   per-call value (non-null) > config value > None (server default).
     resolved_model = per_call_model if per_call_model is not None else cfg.get("model")
     resolved_permission = (
-        per_call_permission if per_call_permission is not None
-        else cfg.get("permission")
+        per_call_permission if per_call_permission is not None else cfg.get("permission")
     )
 
     return run_task(
-        prompt, cfg,
+        prompt,
+        cfg,
         cwd=resolved_cwd,
         model=resolved_model,
         permission=resolved_permission,

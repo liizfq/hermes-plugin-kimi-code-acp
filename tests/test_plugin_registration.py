@@ -29,10 +29,10 @@ from kimi_code_acp.tool import (
     validate_permission,
 )
 
-
 # --------------------------------------------------------------------------- #
 # Schema surface
 # --------------------------------------------------------------------------- #
+
 
 class TestSchemaSurface:
     def test_schema_name(self):
@@ -51,9 +51,7 @@ class TestSchemaSurface:
         props = KIMI_CODE_ACP_SCHEMA["parameters"]["properties"]
         exposed = set(props.keys())
         forbidden_found = exposed & FORBIDDEN_PARAMS
-        assert forbidden_found == set(), (
-            f"Forbidden params exposed in schema: {forbidden_found}"
-        )
+        assert forbidden_found == set(), f"Forbidden params exposed in schema: {forbidden_found}"
 
     def test_schema_required_matches_expected(self):
         assert REQUIRED_PARAMS == ("prompt", "cwd", "model", "permission")
@@ -78,6 +76,7 @@ class TestSchemaSurface:
 # --------------------------------------------------------------------------- #
 # validate_permission — per-call permission argument validation
 # --------------------------------------------------------------------------- #
+
 
 class TestValidatePermission:
     def test_none_passes(self):
@@ -118,6 +117,7 @@ class TestValidatePermission:
 # --------------------------------------------------------------------------- #
 # Plugin registration
 # --------------------------------------------------------------------------- #
+
 
 def _load_plugin_module():
     """Load plugin __init__.py fresh (avoid global singleton state)."""
@@ -179,15 +179,13 @@ class TestPluginRegistration:
     def test_runtime_provider_keys(self):
         """The two runtime provider registrations cover both
         ``kimi-agent-acp`` and ``kimi-code-acp``."""
-        from kimi_code_acp.runtime import RUNTIME_PROVIDER_KEY
         from kimi_code_acp.delegation import DELEGATION_PROVIDER_KEY
+        from kimi_code_acp.runtime import RUNTIME_PROVIDER_KEY
+
         mod = _load_plugin_module()
         ctx = MagicMock()
         mod.register(ctx)
-        keys = [
-            call.args[0]
-            for call in ctx.register_acp_runtime_provider.call_args_list
-        ]
+        keys = [call.args[0] for call in ctx.register_acp_runtime_provider.call_args_list]
         assert RUNTIME_PROVIDER_KEY in keys
         assert DELEGATION_PROVIDER_KEY in keys
 
@@ -196,17 +194,20 @@ class TestPluginRegistration:
 # Handler return type
 # --------------------------------------------------------------------------- #
 
+
 class TestHandlerReturnType:
     def test_handler_returns_string(self, tmp_path):
         cfg = dict(DEFAULTS)
         with patch("hermes_cli.config.load_config") as mock_load:
             mock_load.return_value = {CONFIG_SECTION: cfg}
-            result = handle_kimi_code_acp({
-                "prompt": "do something",
-                "cwd": str(tmp_path),
-                "model": None,
-                "permission": None,
-            })
+            result = handle_kimi_code_acp(
+                {
+                    "prompt": "do something",
+                    "cwd": str(tmp_path),
+                    "model": None,
+                    "permission": None,
+                }
+            )
             assert isinstance(result, str)
 
     def test_handler_empty_prompt_returns_error_string(self, tmp_path):
@@ -222,36 +223,42 @@ class TestHandlerReturnType:
         assert "error" in parsed
 
     def test_handler_bad_cwd_returns_error_string(self):
-        result = handle_kimi_code_acp({
-            "prompt": "do something",
-            "cwd": "/nonexistent/path/to/nowhere",
-            "model": None,
-            "permission": None,
-        })
+        result = handle_kimi_code_acp(
+            {
+                "prompt": "do something",
+                "cwd": "/nonexistent/path/to/nowhere",
+                "model": None,
+                "permission": None,
+            }
+        )
         parsed = json.loads(result)
         assert "error" in parsed
         assert parsed.get("error_type") == "ValueError"
 
     def test_handler_bad_model_returns_error_string(self, tmp_path):
         """Non-string non-null ``model`` is rejected with ValueError JSON."""
-        result = handle_kimi_code_acp({
-            "prompt": "do something",
-            "cwd": str(tmp_path),
-            "model": 123,
-            "permission": None,
-        })
+        result = handle_kimi_code_acp(
+            {
+                "prompt": "do something",
+                "cwd": str(tmp_path),
+                "model": 123,
+                "permission": None,
+            }
+        )
         parsed = json.loads(result)
         assert "error" in parsed
         assert parsed.get("error_type") == "ValueError"
 
     def test_handler_bad_permission_returns_error_string(self, tmp_path):
         """Non-string non-null ``permission`` is rejected with ValueError JSON."""
-        result = handle_kimi_code_acp({
-            "prompt": "do something",
-            "cwd": str(tmp_path),
-            "model": None,
-            "permission": 123,
-        })
+        result = handle_kimi_code_acp(
+            {
+                "prompt": "do something",
+                "cwd": str(tmp_path),
+                "model": None,
+                "permission": 123,
+            }
+        )
         parsed = json.loads(result)
         assert "error" in parsed
         assert parsed.get("error_type") == "ValueError"
@@ -261,6 +268,7 @@ class TestHandlerReturnType:
 # Handler ConfigError: no exception text leaked
 # --------------------------------------------------------------------------- #
 
+
 class TestHandlerConfigErrorNoLeak:
     SECRET_SENTINEL = "SUPER_SECRET_TOKEN_xyz789"
 
@@ -268,16 +276,19 @@ class TestHandlerConfigErrorNoLeak:
         from kimi_code_acp.config import ConfigError
 
         sentinel_msg = f"acp_command references {self.SECRET_SENTINEL}"
-        with patch("kimi_code_acp.config.merge_config") as mock_merge, \
-             patch("kimi_code_acp.config.validate_config",
-                   side_effect=ConfigError(sentinel_msg)):
+        with (
+            patch("kimi_code_acp.config.merge_config") as mock_merge,
+            patch("kimi_code_acp.config.validate_config", side_effect=ConfigError(sentinel_msg)),
+        ):
             mock_merge.return_value = {}
-            result = handle_kimi_code_acp({
-                "prompt": "do something",
-                "cwd": str(tmp_path),
-                "model": None,
-                "permission": None,
-            })
+            result = handle_kimi_code_acp(
+                {
+                    "prompt": "do something",
+                    "cwd": str(tmp_path),
+                    "model": None,
+                    "permission": None,
+                }
+            )
 
         parsed = json.loads(result)
         assert parsed["error"] == "ACP configuration validation failed"
@@ -287,16 +298,22 @@ class TestHandlerConfigErrorNoLeak:
     def test_config_error_stable_json_shape(self, tmp_path):
         from kimi_code_acp.config import ConfigError
 
-        with patch("kimi_code_acp.config.merge_config") as mock_merge, \
-             patch("kimi_code_acp.config.validate_config",
-                   side_effect=ConfigError("detailed info with path /secret")):
+        with (
+            patch("kimi_code_acp.config.merge_config") as mock_merge,
+            patch(
+                "kimi_code_acp.config.validate_config",
+                side_effect=ConfigError("detailed info with path /secret"),
+            ),
+        ):
             mock_merge.return_value = {}
-            result = handle_kimi_code_acp({
-                "prompt": "do something",
-                "cwd": str(tmp_path),
-                "model": None,
-                "permission": None,
-            })
+            result = handle_kimi_code_acp(
+                {
+                    "prompt": "do something",
+                    "cwd": str(tmp_path),
+                    "model": None,
+                    "permission": None,
+                }
+            )
 
         parsed = json.loads(result)
         assert set(parsed.keys()) == {"error", "error_type"}
@@ -307,6 +324,7 @@ class TestHandlerConfigErrorNoLeak:
 # --------------------------------------------------------------------------- #
 # Backend delegation (run_task delegates to backend.run_task)
 # --------------------------------------------------------------------------- #
+
 
 class TestBackendDelegation:
     def test_run_task_returns_json_string(self, tmp_path):
@@ -328,6 +346,7 @@ class TestBackendDelegation:
 # --------------------------------------------------------------------------- #
 # register() surface isolation — no aux-task, exactly four surfaces
 # --------------------------------------------------------------------------- #
+
 
 class TestRegisterSurfaceIsolation:
     def test_register_does_not_touch_other_surfaces(self):

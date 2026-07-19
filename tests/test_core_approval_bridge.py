@@ -20,16 +20,15 @@ from unittest.mock import MagicMock, patch
 
 from kimi_code_acp import backend
 
-
 # --------------------------------------------------------------------------- #
 # 1. _get_approval_callback forwards the core factory's result verbatim
 # --------------------------------------------------------------------------- #
 
+
 class TestGetApprovalCallbackForwardsCoreFactory:
     def test_returns_core_factory_result(self):
         sentinel_cb = MagicMock(name="core_callback")
-        fake_factory = MagicMock(name="make_acp_approval_callback",
-                                 return_value=sentinel_cb)
+        fake_factory = MagicMock(name="make_acp_approval_callback", return_value=sentinel_cb)
         with patch(
             "agent.transports.acp_approval.make_acp_approval_callback",
             fake_factory,
@@ -56,6 +55,7 @@ class TestGetApprovalCallbackForwardsCoreFactory:
 # 2. _get_approval_callback returns None when the core import fails
 # --------------------------------------------------------------------------- #
 
+
 class TestGetApprovalCallbackImportFailure:
     def test_returns_none_when_core_module_unavailable(self):
         real_import = __import__
@@ -73,6 +73,7 @@ class TestGetApprovalCallbackImportFailure:
 # --------------------------------------------------------------------------- #
 # 3. auto_approve_permissions is always False (regression guard)
 # --------------------------------------------------------------------------- #
+
 
 class TestAutoApproveIsAlwaysFalse:
     def test_backend_has_no_bypass_helper(self):

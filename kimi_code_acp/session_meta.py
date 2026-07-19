@@ -22,10 +22,10 @@ shape with no operator-controlled string content.
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 
-def build_session_meta() -> Dict[str, Any]:
+def build_session_meta() -> dict[str, Any]:
     """Build the Kimi-specific ``session_meta`` for ACP ``session/new``.
 
     Returns
@@ -38,7 +38,7 @@ def build_session_meta() -> Dict[str, Any]:
     return {}
 
 
-def session_meta_is_safe(meta: Dict[str, Any]) -> bool:
+def session_meta_is_safe(meta: dict[str, Any]) -> bool:
     """Lightweight shape check for the session_meta dict.
 
     Verifies the top-level is a dict.  Used by tests to confirm the helper

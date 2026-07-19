@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import json
 import os
-import tempfile
 import threading
 import time
 from pathlib import Path
@@ -40,15 +39,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kimi_code_acp.backend import run_task, close_session
-from kimi_code_acp.session_meta import build_session_meta, session_meta_is_safe
+from kimi_code_acp.backend import close_session, run_task
 from kimi_code_acp.config import CONFIG_SECTION, DEFAULTS
+from kimi_code_acp.session_meta import build_session_meta, session_meta_is_safe
 from kimi_code_acp.tool import handle_kimi_code_acp
-
 
 # --------------------------------------------------------------------------- #
 # Fixtures
 # --------------------------------------------------------------------------- #
+
 
 @pytest.fixture
 def valid_config():
@@ -191,6 +190,7 @@ def reset_fake_session():
 # 1. Success path
 # --------------------------------------------------------------------------- #
 
+
 class TestSuccessPath:
     def test_returns_json_string(self, valid_config, mock_turn_result, valid_cwd):
         with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession):
@@ -227,6 +227,7 @@ class TestSuccessPath:
         self, valid_config, mock_turn_result, valid_cwd
     ):
         from kimi_code_acp.config import ACP_ARGS, ACP_COMMAND
+
         with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession):
             FakeSession._run_turn_result = mock_turn_result
             run_task("write a function", valid_config, cwd=valid_cwd)
@@ -257,6 +258,7 @@ class TestSuccessPath:
 # 1b. Config fallback resolution via handler
 # --------------------------------------------------------------------------- #
 
+
 class TestConfigFallbackResolution:
     """Per-call value > config value > None (server default).
     Resolution happens in the handler; run_task only sees the resolved
@@ -271,16 +273,20 @@ class TestConfigFallbackResolution:
     def test_config_model_fallback(self, mock_turn_result, tmp_path):
         cfg = dict(DEFAULTS)
         cfg["model"] = "kimi-k2"
-        with patch("hermes_cli.config.load_config") as mock_load, \
-             self._patch_backend(mock_turn_result):
+        with (
+            patch("hermes_cli.config.load_config") as mock_load,
+            self._patch_backend(mock_turn_result),
+        ):
             mock_load.return_value = {CONFIG_SECTION: cfg}
             FakeSession._run_turn_result = mock_turn_result
-            result = handle_kimi_code_acp({
-                "prompt": "do something",
-                "cwd": str(tmp_path),
-                "model": None,
-                "permission": None,
-            })
+            result = handle_kimi_code_acp(
+                {
+                    "prompt": "do something",
+                    "cwd": str(tmp_path),
+                    "model": None,
+                    "permission": None,
+                }
+            )
         parsed = json.loads(result)
         assert "error" not in parsed, parsed
         session = FakeSession.last()
@@ -289,16 +295,20 @@ class TestConfigFallbackResolution:
     def test_per_call_model_overrides_config(self, mock_turn_result, tmp_path):
         cfg = dict(DEFAULTS)
         cfg["model"] = "kimi-k2"
-        with patch("hermes_cli.config.load_config") as mock_load, \
-             self._patch_backend(mock_turn_result):
+        with (
+            patch("hermes_cli.config.load_config") as mock_load,
+            self._patch_backend(mock_turn_result),
+        ):
             mock_load.return_value = {CONFIG_SECTION: cfg}
             FakeSession._run_turn_result = mock_turn_result
-            result = handle_kimi_code_acp({
-                "prompt": "do something",
-                "cwd": str(tmp_path),
-                "model": "kimi-k1.5",
-                "permission": None,
-            })
+            result = handle_kimi_code_acp(
+                {
+                    "prompt": "do something",
+                    "cwd": str(tmp_path),
+                    "model": "kimi-k1.5",
+                    "permission": None,
+                }
+            )
         parsed = json.loads(result)
         assert "error" not in parsed, parsed
         session = FakeSession.last()
@@ -307,16 +317,20 @@ class TestConfigFallbackResolution:
     def test_config_permission_fallback(self, mock_turn_result, tmp_path):
         cfg = dict(DEFAULTS)
         cfg["permission"] = "auto"
-        with patch("hermes_cli.config.load_config") as mock_load, \
-             self._patch_backend(mock_turn_result):
+        with (
+            patch("hermes_cli.config.load_config") as mock_load,
+            self._patch_backend(mock_turn_result),
+        ):
             mock_load.return_value = {CONFIG_SECTION: cfg}
             FakeSession._run_turn_result = mock_turn_result
-            result = handle_kimi_code_acp({
-                "prompt": "do something",
-                "cwd": str(tmp_path),
-                "model": None,
-                "permission": None,
-            })
+            result = handle_kimi_code_acp(
+                {
+                    "prompt": "do something",
+                    "cwd": str(tmp_path),
+                    "model": None,
+                    "permission": None,
+                }
+            )
         parsed = json.loads(result)
         assert "error" not in parsed, parsed
         session = FakeSession.last()
@@ -324,16 +338,20 @@ class TestConfigFallbackResolution:
 
     def test_no_config_no_per_call_uses_none(self, mock_turn_result, tmp_path):
         cfg = dict(DEFAULTS)
-        with patch("hermes_cli.config.load_config") as mock_load, \
-             self._patch_backend(mock_turn_result):
+        with (
+            patch("hermes_cli.config.load_config") as mock_load,
+            self._patch_backend(mock_turn_result),
+        ):
             mock_load.return_value = {CONFIG_SECTION: cfg}
             FakeSession._run_turn_result = mock_turn_result
-            result = handle_kimi_code_acp({
-                "prompt": "do something",
-                "cwd": str(tmp_path),
-                "model": None,
-                "permission": None,
-            })
+            result = handle_kimi_code_acp(
+                {
+                    "prompt": "do something",
+                    "cwd": str(tmp_path),
+                    "model": None,
+                    "permission": None,
+                }
+            )
         parsed = json.loads(result)
         assert "error" not in parsed
         session = FakeSession.last()
@@ -344,6 +362,7 @@ class TestConfigFallbackResolution:
 # --------------------------------------------------------------------------- #
 # 2. Prompt/cwd/timeout passed through
 # --------------------------------------------------------------------------- #
+
 
 class TestPromptCwdTimeout:
     def test_prompt_passed_to_run_turn(self, valid_config, mock_turn_result, valid_cwd):
@@ -379,6 +398,7 @@ class TestPromptCwdTimeout:
 # --------------------------------------------------------------------------- #
 # 3. session_meta is empty dict (Kimi adapter ignores _meta)
 # --------------------------------------------------------------------------- #
+
 
 class TestSessionMeta:
     def test_session_meta_passed_to_constructor(self, valid_config, mock_turn_result, valid_cwd):
@@ -417,19 +437,24 @@ class TestSessionMeta:
 # 4. Approval callback forwarded when available
 # --------------------------------------------------------------------------- #
 
+
 class TestApprovalCallback:
     def test_callback_forwarded_when_available(self, valid_config, mock_turn_result, valid_cwd):
         mock_cb = MagicMock(return_value="once")
-        with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession), \
-             patch("kimi_code_acp.backend._get_approval_callback", return_value=mock_cb):
+        with (
+            patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession),
+            patch("kimi_code_acp.backend._get_approval_callback", return_value=mock_cb),
+        ):
             FakeSession._run_turn_result = mock_turn_result
             run_task("prompt", valid_config, cwd=valid_cwd)
         session = FakeSession.last()
         assert session.constructor_kwargs["approval_callback"] is mock_cb
 
     def test_no_callback_when_unavailable(self, valid_config, mock_turn_result, valid_cwd):
-        with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession), \
-             patch("kimi_code_acp.backend._get_approval_callback", return_value=None):
+        with (
+            patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession),
+            patch("kimi_code_acp.backend._get_approval_callback", return_value=None),
+        ):
             FakeSession._run_turn_result = mock_turn_result
             run_task("prompt", valid_config, cwd=valid_cwd)
         session = FakeSession.last()
@@ -440,10 +465,13 @@ class TestApprovalCallback:
 # 5. auto_approve_permissions is ALWAYS False
 # --------------------------------------------------------------------------- #
 
+
 class TestAutoApprove:
     def test_auto_approve_always_false(self, valid_config, mock_turn_result, valid_cwd):
-        with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession), \
-             patch("kimi_code_acp.backend._get_approval_callback", return_value=MagicMock()):
+        with (
+            patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession),
+            patch("kimi_code_acp.backend._get_approval_callback", return_value=MagicMock()),
+        ):
             FakeSession._run_turn_result = mock_turn_result
             run_task("prompt", valid_config, cwd=valid_cwd)
         session = FakeSession.last()
@@ -453,6 +481,7 @@ class TestAutoApprove:
 # --------------------------------------------------------------------------- #
 # 6. Session lifecycle
 # --------------------------------------------------------------------------- #
+
 
 class TestSessionLifecycle:
     def test_session_not_closed_on_success(self, valid_config, mock_turn_result, valid_cwd):
@@ -509,6 +538,7 @@ class TestSessionLifecycle:
 # 6b. Constructor exception -> safe error JSON
 # --------------------------------------------------------------------------- #
 
+
 class TestSessionCreationFailure:
     def test_session_cls_ctor_exception_returns_error_json(self, valid_config, valid_cwd):
         FakeSession._ctor_raises = RuntimeError("ctor boom")
@@ -520,9 +550,7 @@ class TestSessionCreationFailure:
         assert FakeSession.instances == []
         # module-level singleton must remain clean
         FakeSession._ctor_raises = None
-        mock_ok = MagicMock(
-            final_text="ok", tool_iterations=1, should_retire=False, error=None
-        )
+        mock_ok = MagicMock(final_text="ok", tool_iterations=1, should_retire=False, error=None)
         FakeSession._run_turn_result = mock_ok
         with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession):
             result2 = run_task("prompt2", valid_config, cwd=valid_cwd)
@@ -534,6 +562,7 @@ class TestSessionCreationFailure:
 # --------------------------------------------------------------------------- #
 # 7. Session reuse
 # --------------------------------------------------------------------------- #
+
 
 class TestSessionReuse:
     def test_session_reused_across_calls(self, valid_config, mock_turn_result, valid_cwd):
@@ -556,6 +585,7 @@ class TestSessionReuse:
 # 8. Session retirement
 # --------------------------------------------------------------------------- #
 
+
 class TestSessionRetirement:
     def test_session_recreated_after_retirement(self, valid_config, mock_turn_result, valid_cwd):
         retiring = MagicMock()
@@ -575,18 +605,23 @@ class TestSessionRetirement:
 # 9. Health-check
 # --------------------------------------------------------------------------- #
 
+
 class TestHealthCheck:
     def test_dead_session_replaced(self, valid_config, mock_turn_result, valid_cwd):
-        with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession), \
-             patch("kimi_code_acp.backend._ACPProcessManager.is_alive", return_value=False):
+        with (
+            patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession),
+            patch("kimi_code_acp.backend._ACPProcessManager.is_alive", return_value=False),
+        ):
             FakeSession._run_turn_result = mock_turn_result
             run_task("first", valid_config, cwd=valid_cwd)
             run_task("second", valid_config, cwd=valid_cwd)
         assert len(FakeSession.instances) == 2
 
     def test_alive_session_reused(self, valid_config, mock_turn_result, valid_cwd):
-        with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession), \
-             patch("kimi_code_acp.backend._ACPProcessManager.is_alive", return_value=True):
+        with (
+            patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession),
+            patch("kimi_code_acp.backend._ACPProcessManager.is_alive", return_value=True),
+        ):
             FakeSession._run_turn_result = mock_turn_result
             run_task("first", valid_config, cwd=valid_cwd)
             run_task("second", valid_config, cwd=valid_cwd)
@@ -597,9 +632,11 @@ class TestHealthCheck:
 # 10. Public close_session() API
 # --------------------------------------------------------------------------- #
 
+
 class TestCloseSession:
     def test_close_session_clears_singleton(self, valid_config, mock_turn_result, valid_cwd):
         import kimi_code_acp.backend as backend_mod
+
         with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession):
             FakeSession._run_turn_result = mock_turn_result
             run_task("prompt", valid_config, cwd=valid_cwd)
@@ -617,12 +654,11 @@ class TestCloseSession:
 # 11. Safe error
 # --------------------------------------------------------------------------- #
 
+
 class TestSafeError:
     SECRET_SENTINEL = "SUPER_SECRET_TOKEN_xyz789"
 
-    def test_error_json_does_not_contain_exception_message(
-        self, valid_config, valid_cwd
-    ):
+    def test_error_json_does_not_contain_exception_message(self, valid_config, valid_cwd):
         with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession):
             FakeSession._run_turn_raises = RuntimeError(
                 f"command: kimi --token={self.SECRET_SENTINEL} failed"
@@ -652,13 +688,16 @@ class TestSafeError:
 # 12. Missing core (ImportError) -> compatibility error
 # --------------------------------------------------------------------------- #
 
+
 class TestMissingCore:
     def test_missing_core_returns_compat_error(self, valid_config, valid_cwd):
         with patch("kimi_code_acp.backend._import_session_class", return_value=None):
             result = run_task("prompt", valid_config, cwd=valid_cwd)
         parsed = json.loads(result)
         assert "error" in parsed
-        assert "not available" in parsed["error"].lower() or "incompatible" in parsed["error"].lower()
+        assert (
+            "not available" in parsed["error"].lower() or "incompatible" in parsed["error"].lower()
+        )
         assert parsed["error_type"] == "ImportError"
 
     def test_no_session_created_when_core_missing(self, valid_config, valid_cwd):
@@ -670,6 +709,7 @@ class TestMissingCore:
 # --------------------------------------------------------------------------- #
 # 13. Old core (missing params) -> compatibility error
 # --------------------------------------------------------------------------- #
+
 
 class TestOldCore:
     def test_old_core_returns_compat_error(self, valid_config, valid_cwd):
@@ -683,12 +723,13 @@ class TestOldCore:
         from kimi_code_acp.backend import _import_session_class
 
         class OldSession:
-            def __init__(self, *, command, model=None,
-                         approval_callback=None,
-                         auto_approve_permissions=False):
+            def __init__(
+                self, *, command, model=None, approval_callback=None, auto_approve_permissions=False
+            ):
                 pass
 
         import sys
+
         mock_module = MagicMock()
         mock_module.ACPClientSession = OldSession
         original = sys.modules.get("agent.transports.acp_client_session")
@@ -706,14 +747,21 @@ class TestOldCore:
         from kimi_code_acp.backend import _import_session_class
 
         class NewSession:
-            def __init__(self, *, command, args=None, model=None,
-                         permission_mode=None,
-                         session_meta=None,
-                         approval_callback=None,
-                         auto_approve_permissions=False):
+            def __init__(
+                self,
+                *,
+                command,
+                args=None,
+                model=None,
+                permission_mode=None,
+                session_meta=None,
+                approval_callback=None,
+                auto_approve_permissions=False,
+            ):
                 pass
 
         import sys
+
         mock_module = MagicMock()
         mock_module.ACPClientSession = NewSession
         original = sys.modules.get("agent.transports.acp_client_session")
@@ -731,6 +779,7 @@ class TestOldCore:
 # --------------------------------------------------------------------------- #
 # 14. Config invalid -> does not call session
 # --------------------------------------------------------------------------- #
+
 
 class TestConfigInvalid:
     def test_invalid_config_does_not_create_session(self, tmp_path):
@@ -754,12 +803,15 @@ class TestConfigInvalid:
 # 15. cwd re-resolved (TOCTOU)
 # --------------------------------------------------------------------------- #
 
+
 class TestCwdTOCTOU:
     def test_cwd_resolves_to_none_after_validation_returns_error(
         self, valid_config, mock_turn_result, valid_cwd
     ):
-        with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession), \
-             patch("kimi_code_acp.backend._resolve_cwd", return_value=None):
+        with (
+            patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession),
+            patch("kimi_code_acp.backend._resolve_cwd", return_value=None),
+        ):
             result = run_task("prompt", valid_config, cwd=valid_cwd)
         parsed = json.loads(result)
         assert "error" in parsed and parsed["error_type"] == "ValueError"
@@ -778,6 +830,7 @@ class TestCwdTOCTOU:
 # 16. KeyboardInterrupt/SystemExit propagated
 # --------------------------------------------------------------------------- #
 
+
 class TestKeyboardInterruptPropagation:
     def test_keyboard_interrupt_not_swallowed(self, valid_config, valid_cwd):
         with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession):
@@ -795,6 +848,7 @@ class TestKeyboardInterruptPropagation:
 # --------------------------------------------------------------------------- #
 # 17. TurnResult with .error -> safe error JSON
 # --------------------------------------------------------------------------- #
+
 
 class TestTurnResultError:
     def test_turn_result_error_returns_safe_json(self, valid_config, valid_cwd):
@@ -817,6 +871,7 @@ class TestTurnResultError:
 # 17b. Inactivity timeout error classification
 # --------------------------------------------------------------------------- #
 
+
 class TestInactivityErrorClassification:
     SECRET_SENTINEL = "SUPER_SECRET_TOKEN_xyz789"
 
@@ -826,8 +881,7 @@ class TestInactivityErrorClassification:
         error_result.tool_iterations = 0
         error_result.should_retire = True
         error_result.error = (
-            "ACP session/prompt failed: ACP session inactive "
-            f"(token={self.SECRET_SENTINEL})"
+            f"ACP session/prompt failed: ACP session inactive (token={self.SECRET_SENTINEL})"
         )
         with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession):
             FakeSession._run_turn_result = error_result
@@ -855,9 +909,7 @@ class TestInactivityErrorClassification:
         assert self.SECRET_SENTINEL not in result
         assert "kimi" not in parsed["error"]
 
-    def test_arbitrary_error_with_secret_still_runtime_error(
-        self, valid_config, valid_cwd
-    ):
+    def test_arbitrary_error_with_secret_still_runtime_error(self, valid_config, valid_cwd):
         error_result = MagicMock()
         error_result.final_text = ""
         error_result.tool_iterations = 0
@@ -889,9 +941,7 @@ class TestInactivityErrorClassification:
         error_result.final_text = ""
         error_result.tool_iterations = 0
         error_result.should_retire = False
-        error_result.error = (
-            "Some preamble: ACP session/prompt failed: ACP session inactive"
-        )
+        error_result.error = "Some preamble: ACP session/prompt failed: ACP session inactive"
         with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession):
             FakeSession._run_turn_result = error_result
             result = run_task("prompt", valid_config, cwd=valid_cwd)
@@ -918,6 +968,7 @@ class TestInactivityErrorClassification:
 # 18. session_meta helper regression (empty-dict shape)
 # --------------------------------------------------------------------------- #
 
+
 class TestSessionMetaHelper:
     def test_build_session_meta_returns_empty_dict(self):
         meta = build_session_meta()
@@ -935,6 +986,7 @@ class TestSessionMetaHelper:
 # 19. Concurrency: two concurrent run_task serialise on lock
 # --------------------------------------------------------------------------- #
 
+
 class TestRunTurnSerialisation:
     def test_two_concurrent_run_task_serialise_on_lock(
         self, valid_config, mock_turn_result, valid_cwd
@@ -943,8 +995,8 @@ class TestRunTurnSerialisation:
         results: list = []
         errors: list = []
 
-        with patch("kimi_code_acp.backend._import_session_class",
-                   return_value=FakeSession):
+        with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession):
+
             def worker():
                 try:
                     results.append(run_task("prompt", valid_config, cwd=valid_cwd))
@@ -970,6 +1022,7 @@ class TestRunTurnSerialisation:
 # 20. close_session during a running turn waits
 # --------------------------------------------------------------------------- #
 
+
 class TestCloseDuringTurn:
     def test_close_session_blocks_until_turn_finishes(
         self, valid_config, mock_turn_result, valid_cwd
@@ -983,8 +1036,7 @@ class TestCloseDuringTurn:
 
         def worker():
             try:
-                with patch("kimi_code_acp.backend._import_session_class",
-                           return_value=FakeSession):
+                with patch("kimi_code_acp.backend._import_session_class", return_value=FakeSession):
                     turn_result_holder.append(run_task("prompt", valid_config, cwd=valid_cwd))
             except Exception as e:
                 errors.append(e)
@@ -1003,9 +1055,7 @@ class TestCloseDuringTurn:
         tc = threading.Thread(target=closer)
         tc.start()
 
-        assert not close_done.wait(timeout=0.3), (
-            "close_session returned before the turn finished"
-        )
+        assert not close_done.wait(timeout=0.3), "close_session returned before the turn finished"
 
         block_event.set()
         tc.join(timeout=2)
@@ -1019,6 +1069,7 @@ class TestCloseDuringTurn:
 # --------------------------------------------------------------------------- #
 # 23. Refactored manager invariants
 # --------------------------------------------------------------------------- #
+
 
 class TestRefactoredManagerInvariants:
     def test_close_session_cannot_interleave_before_run_turn(
@@ -1045,7 +1096,9 @@ class TestRefactoredManagerInvariants:
                     return_value=FakeSession,
                 ):
                     with patch.object(
-                        FakeSession, "run_turn", instrumented_run_turn,
+                        FakeSession,
+                        "run_turn",
+                        instrumented_run_turn,
                     ):
                         worker_result.append(run_task("prompt", valid_config, cwd=valid_cwd))
             except BaseException as e:  # noqa: BLE001
@@ -1160,6 +1213,7 @@ class TestRefactoredManagerInvariants:
             "kimi_code_acp.backend._import_session_class",
             return_value=FakeSession,
         ):
+
             def worker():
                 try:
                     results.append(run_task("prompt", valid_config, cwd=valid_cwd))
@@ -1181,6 +1235,7 @@ class TestRefactoredManagerInvariants:
 # --------------------------------------------------------------------------- #
 # 25. Live-switch regression
 # --------------------------------------------------------------------------- #
+
 
 class TestLiveConfigSwitch:
     """``model`` and ``permission`` are NOT session-creation-locked:
@@ -1217,22 +1272,22 @@ class TestLiveConfigSwitch:
             FakeSession._run_turn_result = mock_turn_result
             run_task("first", valid_config, cwd=valid_cwd, model=None, permission=None)
             run_task(
-                "second", valid_config, cwd=valid_cwd, model=None,
+                "second",
+                valid_config,
+                cwd=valid_cwd,
+                model=None,
                 permission="default",
             )
 
         assert len(FakeSession.instances) == 1, (
-            "permission change caused rebuild; "
-            f"instances={len(FakeSession.instances)}"
+            f"permission change caused rebuild; instances={len(FakeSession.instances)}"
         )
         session = FakeSession.last()
         assert session.constructor_kwargs["permission_mode"] is None
         assert session._set_permission_mode_calls == ["default"]
         assert session._set_model_calls == []
 
-    def test_cwd_change_still_rebuilds(
-        self, valid_config, mock_turn_result, tmp_path
-    ):
+    def test_cwd_change_still_rebuilds(self, valid_config, mock_turn_result, tmp_path):
         cwd_a = str(tmp_path / "a")
         cwd_b = str(tmp_path / "b")
         os.makedirs(cwd_a, exist_ok=True)
@@ -1256,9 +1311,7 @@ class TestLiveConfigSwitch:
         assert second._set_model_calls == []
         assert second._set_permission_mode_calls == []
 
-    def test_live_model_switch_failure_denies(
-        self, valid_config, mock_turn_result, valid_cwd
-    ):
+    def test_live_model_switch_failure_denies(self, valid_config, mock_turn_result, valid_cwd):
         with patch(
             "kimi_code_acp.backend._import_session_class",
             return_value=FakeSession,
@@ -1269,7 +1322,10 @@ class TestLiveConfigSwitch:
 
             FakeSession._set_model_raises = RuntimeError("server rejected model")
             result = run_task(
-                "second", valid_config, cwd=valid_cwd, model="bad-model",
+                "second",
+                valid_config,
+                cwd=valid_cwd,
+                model="bad-model",
             )
 
         parsed = json.loads(result)
@@ -1279,24 +1335,27 @@ class TestLiveConfigSwitch:
         assert session._set_model_calls == ["bad-model"]
         assert session._closed is False
 
-    def test_live_permission_switch_failure_denies(
-        self, valid_config, mock_turn_result, valid_cwd
-    ):
+    def test_live_permission_switch_failure_denies(self, valid_config, mock_turn_result, valid_cwd):
         with patch(
             "kimi_code_acp.backend._import_session_class",
             return_value=FakeSession,
         ):
             FakeSession._run_turn_result = mock_turn_result
             run_task(
-                "first", valid_config, cwd=valid_cwd, model=None, permission=None,
+                "first",
+                valid_config,
+                cwd=valid_cwd,
+                model=None,
+                permission=None,
             )
             assert len(FakeSession.instances) == 1
 
-            FakeSession._set_permission_mode_raises = RuntimeError(
-                "server rejected permission"
-            )
+            FakeSession._set_permission_mode_raises = RuntimeError("server rejected permission")
             result = run_task(
-                "second", valid_config, cwd=valid_cwd, model=None,
+                "second",
+                valid_config,
+                cwd=valid_cwd,
+                model=None,
                 permission="bad-perm",
             )
 
@@ -1342,12 +1401,20 @@ class TestLiveConfigSwitch:
         ):
             FakeSession._run_turn_result = mock_turn_result
             run_task(
-                "first", valid_config, cwd=valid_cwd, model=None, permission="default",
+                "first",
+                valid_config,
+                cwd=valid_cwd,
+                model=None,
+                permission="default",
             )
             assert len(FakeSession.instances) == 1
 
             result = run_task(
-                "second", valid_config, cwd=valid_cwd, model=None, permission=None,
+                "second",
+                valid_config,
+                cwd=valid_cwd,
+                model=None,
+                permission=None,
             )
 
         parsed = json.loads(result)
@@ -1361,6 +1428,7 @@ class TestLiveConfigSwitch:
 # --------------------------------------------------------------------------- #
 # close-vs-run lifecycle race regression
 # --------------------------------------------------------------------------- #
+
 
 class TestCloseRunLifecycleRace:
     def test_close_holds_lock_through_best_effort_close_blocks_run(
@@ -1420,9 +1488,7 @@ class TestCloseRunLifecycleRace:
             "run_task created a second session while close() was still draining "
             f"-- sessions={len(FakeSession.instances)}"
         )
-        assert thread_b.is_alive(), (
-            "run_task finished before close released the gate"
-        )
+        assert thread_b.is_alive(), "run_task finished before close released the gate"
 
         # Step 6: release; A finishes, B creates exactly one new session.
         close_gate.set()
@@ -1436,8 +1502,7 @@ class TestCloseRunLifecycleRace:
         assert not thread_b.is_alive(), "runner did not finish"
 
         assert len(FakeSession.instances) == 2, (
-            f"expected exactly 2 sessions after the second run, "
-            f"got {len(FakeSession.instances)}"
+            f"expected exactly 2 sessions after the second run, got {len(FakeSession.instances)}"
         )
         first = FakeSession.instances[0]
         assert first._closed is True
@@ -1468,6 +1533,7 @@ class TestCloseRunLifecycleRace:
 # --------------------------------------------------------------------------- #
 # atexit_cleanup lock safety
 # --------------------------------------------------------------------------- #
+
 
 class TestAtexitCleanupLockSafety:
     def test_atexit_cleanup_swallows_close_exception(self, valid_config, valid_cwd):

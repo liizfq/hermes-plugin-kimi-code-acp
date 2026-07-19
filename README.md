@@ -58,8 +58,8 @@ the login flow — log in via the interactive CLI first.
 |---|---|---|---|
 | `prompt` | ✅ | - | - |
 | `cwd` | ✅ (must be absolute, existing directory) | - | - |
-| `model` | ✅ (nullable: `null` = server default) | optional fallback (`auxiliary.kimi_code_acp.model`) | - |
-| `permission` | ✅ (nullable: `null` = server default mode) | optional fallback (`auxiliary.kimi_code_acp.permission`) | - |
+| `model` | ✅ (nullable: `null` = server default) | optional fallback (`kimi_code_acp.model`) | - |
+| `permission` | ✅ (nullable: `null` = server default mode) | optional fallback (`kimi_code_acp.permission`) | - |
 | `acp_command` | ❌ | ❌ | ✅ `kimi` |
 | `acp_args` | ❌ | ❌ | ✅ `["acp"]` |
 | `timeout_seconds` | ❌ | ✅ | - |
@@ -123,6 +123,54 @@ kimi_code_acp:
 - `timeout_seconds` must be between 1 and 3600 (this is an **inactivity
   timeout**, not a total task-duration limit).
 - `model` and `permission` must each be `null` or a non-empty string.
+
+## Kimi Code CLI authentication
+
+`kimi acp` requires a logged-in Kimi account (OAuth managed service). Two
+paths, depending on whether you have a Kimi membership:
+
+### Path A — Kimi managed service (members)
+
+```sh
+kimi acp --login
+```
+
+Opens a browser device-code flow. Once authenticated, `~/.kimi-code/credentials/`
+holds the OAuth token and `kimi acp` works out of the box. Refresh is automatic.
+
+### Path B — Custom provider (e.g. LiteLLM, OpenRouter, OpenAI-compatible)
+
+If you don't have a Kimi membership, route Kimi Code CLI through any
+OpenAI-compatible proxy that exposes a Kimi model. Configure the proxy as a
+provider in `~/.kimi-code/config.toml`:
+
+```toml
+# Example: LiteLLM proxy at http://127.0.0.1:8000/v1 exposing kimi-k2.7-code
+default_model = "litellm/kimi-k2-7-code"
+default_permission_mode = "auto"
+
+[providers.litellm]
+type = "openai"
+base_url = "http://127.0.0.1:8000/v1"
+api_key = "<your-litellm-master-key>"
+
+[models."litellm/kimi-k2-7-code"]
+provider = "litellm"
+model = "kimi-k2.7-code"          # must match the model_group on the proxy
+max_context_size = 262144
+max_output_size = 32768          # avoid upstream max_tokens rejection
+display_name = "Kimi K2.7 Code (via LiteLLM)"
+capabilities = ["tool_use"]
+```
+
+With this config, `kimi acp` uses the proxy as its LLM backend instead of
+the managed service. **This plugin is agnostic to which path you choose** —
+both produce the same ACP wire protocol.
+
+> **Tip:** when using Path B, pass `model: null` (the default) on the
+> `kimi_code_acp` tool so the ACP server uses `default_model` from
+> `config.toml`. Passing an explicit model id triggers `session/set_config_option`,
+> which requires Kimi-managed auth on the stock Kimi CLI.
 
 ## Per-call `cwd`
 

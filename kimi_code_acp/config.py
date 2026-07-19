@@ -66,7 +66,7 @@ report.
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 # --------------------------------------------------------------------------- #
 # Constants
@@ -113,7 +113,7 @@ ACP_ARGS: tuple = ("acp",)
 #: from config, and finally from ``None`` = server default.  Non-empty
 #: strings are stripped; empty / whitespace-only strings and non-string
 #: values are rejected by :func:`validate_config`.
-DEFAULTS: Dict[str, Any] = {
+DEFAULTS: dict[str, Any] = {
     "timeout_seconds": 600,  # inactivity timeout (max continuous gap without ACP activity)
     # Optional per-call fallbacks. ``None`` means "use the Kimi ACP
     # server's own default"; a non-empty string is forwarded verbatim
@@ -142,13 +142,14 @@ class ConfigError(ValueError):
 # Merge
 # --------------------------------------------------------------------------- #
 
-def merge_config(user_overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+
+def merge_config(user_overrides: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     """Merge plugin defaults with user config.
 
     Resolution order (user wins):
 
         DEFAULTS  <-  user_overrides (if provided)
-                     <-  config.yaml ``auxiliary.kimi_code_acp`` (if available)
+                     <-  config.yaml ``kimi_code_acp`` (if available)
 
     When *user_overrides* is ``None`` (the normal runtime path), the
     function reads from the Hermes config layer and applies it on top
@@ -184,6 +185,7 @@ def merge_config(user_overrides: Optional[Dict[str, Any]] = None) -> Dict[str, A
     # --- Runtime path: read from Hermes config layer ------------------- #
     try:
         from hermes_cli.config import load_config
+
         config = load_config()
     except Exception:
         # Config unavailable (e.g. test env without HERMES_HOME).
@@ -195,7 +197,7 @@ def merge_config(user_overrides: Optional[Dict[str, Any]] = None) -> Dict[str, A
 
     # Read the top-level ``kimi_code_acp:`` section.  This plugin is a
     # tool, not an LLM routing task, so it deliberately does NOT read
-    # from ``auxiliary.kimi_code_acp`` (see module docstring).
+    # from ``kimi_code_acp`` (see module docstring).
     user_cfg = config.get(CONFIG_SECTION, {})
     if isinstance(user_cfg, dict):
         for k, v in user_cfg.items():
@@ -208,7 +210,8 @@ def merge_config(user_overrides: Optional[Dict[str, Any]] = None) -> Dict[str, A
 # Validation
 # --------------------------------------------------------------------------- #
 
-def validate_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
+
+def validate_config(cfg: dict[str, Any]) -> dict[str, Any]:
     """Validate a merged config dict and return it if valid.
 
     Raises :class:`ConfigError` on any violation.
@@ -250,8 +253,7 @@ def validate_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
         raise ConfigError("timeout_seconds must be a number")
     if timeout < _TIMEOUT_MIN or timeout > _TIMEOUT_MAX:
         raise ConfigError(
-            f"timeout_seconds must be in [{_TIMEOUT_MIN}, {_TIMEOUT_MAX}], "
-            f"got {timeout}"
+            f"timeout_seconds must be in [{_TIMEOUT_MIN}, {_TIMEOUT_MAX}], got {timeout}"
         )
 
     # -- model / permission -- #
@@ -261,13 +263,9 @@ def validate_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
             continue
         if isinstance(_value, str):
             if not _value.strip():
-                raise ConfigError(
-                    f"{_field} must be null or a non-empty string"
-                )
+                raise ConfigError(f"{_field} must be null or a non-empty string")
             cfg[_field] = _value.strip()
             continue
-        raise ConfigError(
-            f"{_field} must be null or a non-empty string"
-        )
+        raise ConfigError(f"{_field} must be null or a non-empty string")
 
     return cfg

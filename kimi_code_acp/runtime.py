@@ -23,14 +23,14 @@ Model resolution priority (runtime path — main agent's ACP session):
     (``kimi_code_acp.model``) — the same key the per-call
     ``kimi_code_acp`` tool argument falls back to.
   4. runtime default (:data:`_DEFAULT_RUNTIME_MODEL`)
-  """
+"""
 
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
-from .config import ACP_ARGS, ACP_COMMAND, CONFIG_SECTION, DEFAULTS
+from .config import ACP_ARGS, ACP_COMMAND, CONFIG_SECTION
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +45,8 @@ _DEFAULT_RUNTIME_MODEL = "kimi-k2"
 
 def resolve_runtime_provider(
     requested_model: Optional[str],
-    cfg: Dict[str, Any],
-) -> Dict[str, Any]:
+    cfg: dict[str, Any],
+) -> dict[str, Any]:
     """Produce a descriptor dict for the ACP runtime provider.
 
     Parameters
@@ -64,6 +64,7 @@ def resolve_runtime_provider(
         model, command, args, base_url, api_key, metadata.
     """
     from .config import merge_config
+
     acp_cfg = merge_config()
 
     effective_model = requested_model or _DEFAULT_RUNTIME_MODEL
@@ -71,11 +72,12 @@ def resolve_runtime_provider(
     if not requested_model:
         try:
             from hermes_cli.config import load_config as _lc
+
             _raw = _lc()
             # Read the top-level ``kimi_code_acp:`` section.  This plugin
             # is a tool, not an LLM routing task, so it does NOT read
             # from ``auxiliary.*`` (see kimi_code_acp/config.py docstring).
-            _aux = (_raw.get(CONFIG_SECTION) or {})
+            _aux = _raw.get(CONFIG_SECTION) or {}
             if isinstance(_aux, dict) and _aux.get("runtime_model"):
                 effective_model = _aux["runtime_model"]
             elif isinstance(_aux, dict) and _aux.get("model"):

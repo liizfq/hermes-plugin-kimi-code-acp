@@ -15,19 +15,17 @@ import importlib.util
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from kimi_code_acp.config import ACP_ARGS, ACP_COMMAND, AUXILIARY_KEY, DEFAULTS
+from kimi_code_acp.config import ACP_ARGS, ACP_COMMAND, DEFAULTS
 from kimi_code_acp.delegation import (
-    DELEGATION_PROVIDER_KEY,
     _DEFAULT_DELEGATION_MODEL,
+    DELEGATION_PROVIDER_KEY,
     resolve_delegation_provider,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Constants
 # --------------------------------------------------------------------------- #
+
 
 class TestDelegationProviderKey:
     def test_key_is_camel_case_slug(self):
@@ -38,14 +36,23 @@ class TestDelegationProviderKey:
 # Resolver behaviour
 # --------------------------------------------------------------------------- #
 
+
 class TestResolverShape:
     def test_returns_dict_with_required_keys(self):
         with patch("kimi_code_acp.delegation.merge_config") as mock_merge:
             mock_merge.return_value = dict(DEFAULTS)
             result = resolve_delegation_provider(None, {})
         assert isinstance(result, dict)
-        for key in ("provider", "model", "api_mode", "base_url", "api_key",
-                     "command", "args", "display_provider"):
+        for key in (
+            "provider",
+            "model",
+            "api_mode",
+            "base_url",
+            "api_key",
+            "command",
+            "args",
+            "display_provider",
+        ):
             assert key in result
 
     def test_provider_is_acp_client(self):
@@ -170,6 +177,7 @@ class TestResolverConfigReading:
 # --------------------------------------------------------------------------- #
 # Plugin registration
 # --------------------------------------------------------------------------- #
+
 
 def _load_plugin_module():
     plugin_dir = Path(__file__).resolve().parent.parent

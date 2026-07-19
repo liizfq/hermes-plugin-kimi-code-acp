@@ -1,6 +1,6 @@
 [project]
 name = "kimi-code-acp"
-version = "0.1.0"
+version = "0.2.0"
 description = "Kimi Code ACP coding tool plugin for Hermes Agent"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -11,3 +11,46 @@ build-backend = "setuptools.backends._legacy:_Backend"
 
 [tool.setuptools]
 packages = ["kimi_code_acp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [
+    ".claude",
+    "tests/__pycache__",
+]
+
+[tool.ruff.lint]
+# Conservative rule set — focus on real bugs, not stylistic nits.
+# This plugin targets Py3.10+ and runs inside Hermes Agent; we don't
+# want lint errors blocking CI on cosmetic issues.
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes (unused imports, undefined names, etc.)
+    "W",    # pycodestyle warnings
+    "I",    # isort (import order)
+    "B",    # flake8-bugbear (likely bugs)
+    "UP",   # pyupgrade (modern Python idioms)
+    "C4",   # flake8-comprehensions
+]
+ignore = [
+    "E501",   # line too long — line-length enforced by formatter, not lint
+    "B008",   # function call in default argument (used for Pydantic-style defaults)
+    "UP007",  # use `X | Y` instead of `Optional[X]` — keep Optional for readability
+    "UP045",  # same as UP007 for `Optional[X]` → `X | None`
+    "UP011",  # lru_cache without parens — we use explicit ()
+    "B904",   # raise from in except — kept for source clarity in error paths
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "B017",   # assertRaises(Exception:) — common in test suites
+    "B011",   # assert False — common in skip-if patterns
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-q"

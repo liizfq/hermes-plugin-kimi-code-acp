@@ -64,10 +64,11 @@ import json
 import logging
 import os
 import threading
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Optional
 
-from .config import ACP_ARGS, ACP_COMMAND, validate_config, ConfigError
+from .config import ACP_ARGS, ACP_COMMAND, ConfigError, validate_config
 from .session_meta import build_session_meta
 
 logger = logging.getLogger(__name__)
@@ -146,7 +147,7 @@ class _ACPProcessManager:
         model: Optional[str],
         cwd: str,
         permission: Optional[str],
-        session_meta: Dict[str, Any],
+        session_meta: dict[str, Any],
         approval_callback: Optional[Callable[..., str]],
         auto_approve: bool,
         prompt: str,
@@ -346,7 +347,7 @@ _manager = _ACPProcessManager()
 
 def run_task(
     prompt: str,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     *,
     cwd: str,
     model: Optional[str] = None,
@@ -383,7 +384,8 @@ def run_task(
     resolved_cwd = _resolve_cwd(cwd)
     if resolved_cwd is None:
         return _error_json(
-            "cwd is not an accessible directory", "ValueError",
+            "cwd is not an accessible directory",
+            "ValueError",
         )
 
     # ---- 3. Lazy-import the core session class ----------------------- #
@@ -442,6 +444,7 @@ def close_session() -> None:
 # Internal helpers
 # --------------------------------------------------------------------------- #
 
+
 def _resolve_cwd(cwd: Any) -> Optional[str]:
     """Re-resolve and check cwd existence (TOCTOU mitigation)."""
     if not isinstance(cwd, str) or not cwd.strip():
@@ -469,6 +472,7 @@ def _import_session_class():
         return None
 
     import inspect
+
     try:
         sig = inspect.signature(ACPClientSession.__init__)
         params = set(sig.parameters.keys())
@@ -540,24 +544,29 @@ def _success_json(turn_result: Any) -> str:
             return _error_json("ACP session inactive", "InactivityTimeoutError")
         return _error_json("ACP task failed", "RuntimeError")
 
-    return json.dumps({
-        "result": result_text,
-        "tool_iterations": tool_iterations,
-        "should_retire": should_retire,
-    })
+    return json.dumps(
+        {
+            "result": result_text,
+            "tool_iterations": tool_iterations,
+            "should_retire": should_retire,
+        }
+    )
 
 
 def _error_json(message: str, error_type: str) -> str:
     """Build a JSON error string with a safe generic message and type name."""
-    return json.dumps({
-        "error": message,
-        "error_type": error_type,
-    })
+    return json.dumps(
+        {
+            "error": message,
+            "error_type": error_type,
+        }
+    )
 
 
 def _safe_exc_type_name() -> str:
     """Return the current exception's type name, or 'RuntimeError' as fallback."""
     import sys
+
     exc = sys.exc_info()[1]
     if exc is not None:
         return type(exc).__name__

@@ -28,10 +28,10 @@ from kimi_code_acp.config import (
     validate_config,
 )
 
-
 # --------------------------------------------------------------------------- #
 # Defaults
 # --------------------------------------------------------------------------- #
+
 
 class TestDefaults:
     def test_defaults_has_exactly_three_keys(self):
@@ -73,7 +73,7 @@ class TestDefaults:
         assert "cwd" not in DEFAULTS
 
     def test_defaults_no_secrets(self):
-        for key, val in DEFAULTS.items():
+        for key, _val in DEFAULTS.items():
             key_lower = key.lower()
             assert "secret" not in key_lower
             assert "token" not in key_lower
@@ -87,6 +87,7 @@ class TestDefaults:
 # --------------------------------------------------------------------------- #
 # Merge
 # --------------------------------------------------------------------------- #
+
 
 class TestMerge:
     def test_merge_with_no_overrides_returns_defaults(self):
@@ -116,9 +117,8 @@ class TestMerge:
         top-level ``kimi_code_acp`` section, the operator's value wins
         over DEFAULTS."""
         from kimi_code_acp.config import CONFIG_SECTION
-        fake_config = {
-            CONFIG_SECTION: {"model": "kimi-k2", "timeout_seconds": 300}
-        }
+
+        fake_config = {CONFIG_SECTION: {"model": "kimi-k2", "timeout_seconds": 300}}
         with patch("hermes_cli.config.load_config") as mock_load:
             mock_load.return_value = fake_config
             merged = merge_config(user_overrides=None)
@@ -148,6 +148,7 @@ class TestMutableDefaultsIsolation:
 # --------------------------------------------------------------------------- #
 # Validation — unknown keys
 # --------------------------------------------------------------------------- #
+
 
 class TestValidateUnknownKeys:
     def test_unknown_key_rejected(self):
@@ -185,6 +186,7 @@ class TestValidateUnknownKeys:
 # Validation — path keys are rejected (cwd-per-call design)
 # --------------------------------------------------------------------------- #
 
+
 class TestValidatePathKeysRejected:
     @pytest.mark.parametrize("path_key", sorted(DEPRECATED_PATH_KEYS))
     def test_deprecated_path_key_rejected(self, path_key):
@@ -211,6 +213,7 @@ class TestValidatePathKeysRejected:
 # --------------------------------------------------------------------------- #
 # Validation — acp_command / acp_args rejected as unsupported keys
 # --------------------------------------------------------------------------- #
+
 
 class TestValidateLauncherKeysRejected:
     @pytest.mark.parametrize(
@@ -254,6 +257,7 @@ class TestValidateLauncherKeysRejected:
 # setting_sources config key; auth lives under ~/.kimi-code/)
 # --------------------------------------------------------------------------- #
 
+
 class TestValidateSettingSourcesRejected:
     def test_setting_sources_rejected_as_unknown_key(self):
         cfg = _valid_config()
@@ -273,6 +277,7 @@ class TestValidateSettingSourcesRejected:
 # --------------------------------------------------------------------------- #
 # Validation — timeout_seconds
 # --------------------------------------------------------------------------- #
+
 
 class TestValidateTimeout:
     def test_timeout_below_min_rejected(self):
@@ -303,6 +308,7 @@ class TestValidateTimeout:
 # --------------------------------------------------------------------------- #
 # Validation — model
 # --------------------------------------------------------------------------- #
+
 
 class TestValidateModel:
     def test_model_none_passes(self):
@@ -353,6 +359,7 @@ class TestValidateModel:
 # Validation — permission
 # --------------------------------------------------------------------------- #
 
+
 class TestValidatePermission:
     def test_permission_none_passes(self):
         cfg = _valid_config(permission=None)
@@ -389,6 +396,7 @@ class TestValidatePermission:
 # Validation — model + permission combined
 # --------------------------------------------------------------------------- #
 
+
 class TestValidateModelAndPermissionCombined:
     def test_both_none_passes(self):
         cfg = _valid_config(model=None, permission=None)
@@ -414,6 +422,7 @@ class TestValidateModelAndPermissionCombined:
 # --------------------------------------------------------------------------- #
 # Security: error messages must not leak operator config values
 # --------------------------------------------------------------------------- #
+
 
 class TestNoSecretLeakInErrors:
     SECRET_SENTINEL = "SUPER_SECRET_TOKEN_xyz789"
@@ -459,6 +468,7 @@ class TestNoSecretLeakInErrors:
     def test_handler_config_error_no_secret_leak(self, tmp_path):
         """End-to-end: handler error string must not contain secret."""
         import json
+
         from kimi_code_acp.tool import handle_kimi_code_acp
 
         cfg = dict(DEFAULTS)
@@ -466,24 +476,21 @@ class TestNoSecretLeakInErrors:
         cfg["timeout_seconds"] = 99999
         with patch("hermes_cli.config.load_config") as mock_load:
             mock_load.return_value = {CONFIG_SECTION: cfg}
-            result = handle_kimi_code_acp(
-                {"prompt": "do something", "cwd": str(tmp_path)}
-            )
+            result = handle_kimi_code_acp({"prompt": "do something", "cwd": str(tmp_path)})
         parsed = json.loads(result)
         assert "error" in parsed
         assert self.SECRET_SENTINEL not in result
 
     def test_handler_path_key_secret_no_leak(self, tmp_path):
         import json
+
         from kimi_code_acp.tool import handle_kimi_code_acp
 
         cfg = dict(DEFAULTS)
         cfg["workdir"] = f"/nonexistent/{self.SECRET_SENTINEL}/path"
         with patch("hermes_cli.config.load_config") as mock_load:
             mock_load.return_value = {CONFIG_SECTION: cfg}
-            result = handle_kimi_code_acp(
-                {"prompt": "do something", "cwd": str(tmp_path)}
-            )
+            result = handle_kimi_code_acp({"prompt": "do something", "cwd": str(tmp_path)})
         assert self.SECRET_SENTINEL not in result
         parsed = json.loads(result)
         assert "error" in parsed
@@ -492,6 +499,7 @@ class TestNoSecretLeakInErrors:
 # --------------------------------------------------------------------------- #
 # Helper
 # --------------------------------------------------------------------------- #
+
 
 def _valid_config(**overrides) -> dict:
     """Return a valid merged config (DEFAULTS only), plus overrides."""
